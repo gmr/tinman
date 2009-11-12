@@ -1,0 +1,39 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{locale.code}}" lang="{{locale.code}}">
+    <head>
+        <title>
+        {% block title %}
+            {% if title %}
+                {{_(title)}}        
+            {% else %}
+                {{_('Hello, World!')}}
+            {% end %}
+        {% end %}
+        </title>
+        <link rel="stylesheet" type="text/css" href="/static/css/reset-min.css" />              
+        <link rel="stylesheet" type="text/css" href="/static/css/base.css" />
+        <script type="text/javascript" src="/static/javascript/jquery.js"></script>
+        <script type="text/javascript" src="/static/javascript/base.js"></script>
+        {% block head %}{% end %}
+        <script type="text/javascript">
+        $(document).ready(function(){
+            base_init();
+        });
+        </script>        
+    </head>
+    <body>
+        <h1>
+        {% if title %}
+            {{_(title)}}        
+        {% else %}
+            {{_('Hello, World!')}}
+        {% end %}
+        </h1>
+        <div id="content">
+        {% block content %}
+        Un-Extended Template Content
+        {% end %}
+        {{ modules.Generic() }}
+        </div>
+    </body>
+</html>

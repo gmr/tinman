@@ -2,12 +2,14 @@
 """
 Project Data Layer
 
-__author__  = "Gavin M. Roy"
-__date__    = 2009-11-10
-__version__ = 0.1
 """
 
-from pymongo.connection import Connection
+__author__  = "Gavin M. Roy"
+__email__   = "gavinmroy@gmail.com"
+__date__    = 2009-11-10
+__version__ = 0.1
+
+#from pymongo.connection import Connection
  
 """
 Mongo is a Singleton handler for our MongoDB usage
@@ -23,5 +25,5 @@ class Mongo:
         
     def __init__(self):
     
-        self.connection = Connection()
-        self.database = self.connection.project
+#        self.connection = Connection()
+#        self.database = self.connection.project

@@ -2,10 +2,12 @@
 """
 Project Request Handler Extension for adding localization and user authentication
  
+"""
+
 __author__  = "Gavin M. Roy"
+__email__   = "gavinmroy@gmail.com"
 __date__    = 2009-11-10
 __version__ = 0.1
-"""
 
 import project.data
 import tornado.locale

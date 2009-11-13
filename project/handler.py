@@ -37,6 +37,7 @@ class RequestHandler(tornado.web.RequestHandler):
         Custom Error HTML Template
         """        
         return self.render('templates/error.html', 
+                           host=self.request.host,
                            status_code=status_code, 
                            message=httplib.responses[status_code] );
     

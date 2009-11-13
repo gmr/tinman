@@ -15,5 +15,4 @@ import project.handler
 class Home(project.handler.RequestHandler):
 
     def get(self):
-        foo
         self.render('templates/apps/home.html', title='Hello, World!');

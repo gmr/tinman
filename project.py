@@ -15,7 +15,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 __author__  = "Gavin M. Roy"
 __email__   = "gavinmroy@gmail.com"
-__date__    = 2009-11-10
+__date__    = "2009-11-10"
 __version__ = 0.1
 
 
@@ -28,6 +28,7 @@ import tornado.locale
 import tornado.web
 
 import project.apps
+import project.handler
 import project.modules
 
 class Application(tornado.web.Application):
@@ -37,6 +38,7 @@ class Application(tornado.web.Application):
         # Our main handler list
         handlers = [
             (r"/", project.apps.Home),
+            (r".*", project.handler.ErrorHandler ) # Should always be last
         ]
         
         # Site settings

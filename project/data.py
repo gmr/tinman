@@ -12,18 +12,20 @@ __version__ = 0.1
 #from pymongo.connection import Connection
  
 """
-Mongo is a Singleton handler for our MongoDB usage
-
-In this case it could be any data object, but I'm playing with MongoDB these days
- 
+DataLayer is just an empty stub singleton class for your data. 
 """
  
-class Mongo:
- 
-    def __call__(self):
-        return self
-        
+class DataLayer:
+
+    # Handle for shared state
+    __shared_state = {}        
+    
     def __init__(self):
-        pass
+
+        # Set the dict to the shared state dict    
+        self.__dict__ = self.__shared_state
+        
+#        Mongo Connection
 #        self.connection = Connection()
 #        self.database = self.connection.project
+        pass

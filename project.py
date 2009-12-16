@@ -19,6 +19,7 @@ __date__    = "2009-11-10"
 __version__ = 0.1
 
 
+import signal
 import multiprocessing
 import logging
 import yaml
@@ -77,6 +78,7 @@ def handle_sigterm(sig, frame):
     
 
 if __name__ == "__main__":
+    multiprocessing.log_to_stderr()
 
     usage = "usage: %prog -c <configfile> [options]"
     version_string = "%%prog %s" % __version__
@@ -146,25 +148,24 @@ if __name__ == "__main__":
  
         # Close stdin            
         sys.stdin.close()
+        signal.signal(signal.SIGTERM, handle_sigterm) 
         
         # Redirect stdout, stderr
         sys.stdout = open('/dev/null', 'a')
         sys.stderr = open('/dev/null', 'a')
 
-    # Load the locales
-    tornado.locale.load_translations(
-        os.path.join(os.path.dirname(__file__), "translations"))
-#    signal.signal(signal.SIGTERM, handle_sigterm) 
     # Kick of the HTTP Server and Application                        
     if options.port is not None:
-        print "Kicking off tornado using options.port: ", options.port
         http_server = tornado.httpserver.HTTPServer(Application(), no_keep_alive = False)
         http_server.listen(int(options.port))
         tornado.ioloop.IOLoop.instance().start()
     else:
-        print "options.port is None, kicking off using config ports"
         for p in config['tornado']['ports']:
             proc = multiprocessing.Process(target=runapp, args=(p,))
             proc.start()
             children.append(proc)
-#
+
+    # Load the locales
+    tornado.locale.load_translations(
+        os.path.join(os.path.dirname(__file__), "translations"))
+

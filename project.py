@@ -152,8 +152,8 @@ if __name__ == "__main__":
         sys.stderr = open('/dev/null', 'a')
 
     # Load the locales
-#    tornado.locale.load_translations(
-#        os.path.join(os.path.dirname(__file__), "translations"))
+    tornado.locale.load_translations(
+        os.path.join(os.path.dirname(__file__), "translations"))
 #    signal.signal(signal.SIGTERM, handle_sigterm) 
     # Kick of the HTTP Server and Application                        
     if options.port is not None:

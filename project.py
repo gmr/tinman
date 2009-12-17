@@ -46,12 +46,10 @@ class Application(tornado.web.Application):
         handlers = [
             (r"/", project.apps.Home),
             # (r".*", project.handler.ErrorHandler ) # Should always be last,  breaks static serving however
-
         ]
         
         # Replace __base_path__ with the path this is running from
         config['static_path'] = config['static_path'].replace('__base_path__', os.path.dirname(os.path.realpath(__file__)))
-        print config['static_path']
         
         # Site settings
         settings = dict(
@@ -237,9 +235,6 @@ if __name__ == "__main__":
     # Handle signals
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler) 
-
-    # Tell multiprocessing we want to use logging
-    multiprocessing.get_logger()
 
     # Kick off our application servers
     for port in config['ports']:

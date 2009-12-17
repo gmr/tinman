@@ -16,6 +16,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 __author__  = "Gavin M. Roy"
 __email__   = "gavinmroy@gmail.com"
 __date__    = "2009-11-10"
+__appname__ = 'project.py'
 __version__ = 0.1
 
 import logging
@@ -76,16 +77,16 @@ def runapp(config, port):
         
 def shutdown():
 
-    logging.debug('Shutting down')
+    logging.debug('%s: shutting down' % __appname__)
     for child in children:
         try:
             if child.is_alive():
-                logging.debug("terminating child: %s" % child.name)
+                logging.debug("%s: Terminating child: %s" % (__appname__, child.name))
                 child.terminate()
         except AssertionError:
-            logging.error('Dead child encountered')
+            logging.error('%s: Dead child encountered' % __appname__)
 
-    logging.debug('All children have shutdown, now terminating controlling application')
+    logging.debug('%s: shutdown complete' % __appname__)
     sys.exit(0)
 
 
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     options, args = parser.parse_args()
     
     if options.config is None:
-        print "Please provide a configuration file"
+        sys.stderr.write('Missing configuration file\n')
         print usage
         sys.exit(1)
 
@@ -128,7 +129,7 @@ if __name__ == "__main__":
         config = yaml.load(stream)
         stream.close()
     except IOError:
-        sys.stderr.write('Invalid or missing configuration file \"%s\"' % options.config)
+        sys.stderr.write('Invalid or missing configuration file "%s"\n' % options.config)
         sys.exit(1)
 
     # Set logging levels dictionary
@@ -139,7 +140,7 @@ if __name__ == "__main__":
                         'error':    logging.ERROR,
                         'critical': logging.CRITICAL
                      }
-    
+                     
     # Get the logging value from the dictionary
     logging_level = config['Logging']['level']
     config['Logging']['level'] = logging_levels.get( config['Logging']['level'], 
@@ -174,8 +175,29 @@ if __name__ == "__main__":
  
             from logging.handlers import SysLogHandler
  
+            # Dictionary mappting for config string to class attribute
+            facilities = {
+                            'LOG_KERN': SysLogHandler.LOG_KERN,
+                            'LOG_USER': SysLogHandler.LOG_USER, 
+                            'LOG_MAIL': SysLogHandler.LOG_MAIL, 
+                            'LOG_DAEMON': SysLogHandler.LOG_DAEMON, 
+                            'LOG_AUTH': SysLogHandler.LOG_AUTH, 
+                            'LOG_LPR': SysLogHandler.LOG_LPR, 
+                            'LOG_NEWS': SysLogHandler.LOG_NEWS,
+                            'LOG_UUCP': SysLogHandler.LOG_UUCP, 
+                            'LOG_LOCAL0': SysLogHandler.LOG_LOCAL0,
+                            'LOG_LOCAL1': SysLogHandler.LOG_LOCAL1,
+                            'LOG_LOCAL2': SysLogHandler.LOG_LOCAL2,
+                            'LOG_LOCAL3': SysLogHandler.LOG_LOCAL3,
+                            'LOG_LOCAL4': SysLogHandler.LOG_LOCAL4,
+                            'LOG_LOCAL5': SysLogHandler.LOG_LOCAL5,
+                            'LOG_LOCAL6': SysLogHandler.LOG_LOCAL6,
+                            'LOG_LOCAL7': SysLogHandler.LOG_LOCAL7,
+                         }
+ 
             # Create the syslog handler            
-            logging_handler = SysLogHandler( address=config['Logging']['syslog']['address'], facility = SysLogHandler.LOG_LOCAL6 )
+            logging_handler = SysLogHandler( address=config['Logging']['syslog']['address'], 
+                                             facility = facilities[config['Logging']['syslog']['facility']] )
             
             # Add the handler
             logger = logging.getLogger()
@@ -196,7 +218,7 @@ if __name__ == "__main__":
             pid = os.fork() 
             if pid > 0:
                 # exit from second parent, print eventual PID before
-                print 'project.py daemon has started - PID # %d.' % pid
+                logging.info('%s daemon has started - PID # %d.' % ( __appname__, pid ))
                 sys.exit(0) 
         except OSError, e:
             sys.stderr.write("Could not fork: %d (%s)\n" % (e.errno, e.strerror))
@@ -213,6 +235,8 @@ if __name__ == "__main__":
         # Redirect stdout, stderr
         sys.stdout = open('/dev/null', 'a')
         sys.stderr = open('/dev/null', 'a')
+    else:
+        logging.info('%s  has started in interactive mode' % __appname__)
 
     # Load the locales
     logging.debug('Loading translations')
@@ -228,7 +252,7 @@ if __name__ == "__main__":
 
     # Kick off our application servers
     for port in config['ports']:
-        logging.debug('Spawning application on port %i' % port)
+        logging.info('%s spawning on port %i' % (__appname__, port))
         proc = multiprocessing.Process(target=runapp, args=(config, port))
         proc.start()
         children.append(proc)       

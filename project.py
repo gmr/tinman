@@ -64,8 +64,6 @@ def runapp(runport):
     except Exception as out:
         print out
         raise
-    else:
-        print "Kickoff on port %d OK!!!!" % runport
 
 children = []
 def handle_sigterm(sig, frame): 
@@ -73,7 +71,7 @@ def handle_sigterm(sig, frame):
         if child.is_alive():
             print "terminating child: ", child.name
             child.terminate()
-    print "Terminating self..." 
+    print "Terminating parent process..." 
     sys.exit(0)
     
 
@@ -154,6 +152,10 @@ if __name__ == "__main__":
         sys.stdout = open('/dev/null', 'a')
         sys.stderr = open('/dev/null', 'a')
 
+    # Load the locales
+    tornado.locale.load_translations(
+        os.path.join(os.path.dirname(__file__), "translations"))
+
     # Kick of the HTTP Server and Application                        
     if options.port is not None:
         http_server = tornado.httpserver.HTTPServer(Application(), no_keep_alive = False)
@@ -165,7 +167,4 @@ if __name__ == "__main__":
             proc.start()
             children.append(proc)
 
-    # Load the locales
-    tornado.locale.load_translations(
-        os.path.join(os.path.dirname(__file__), "translations"))
 

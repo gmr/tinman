@@ -1,9 +1,59 @@
 html {
+    background: #fafafa;
+    text-align: center;
+}
+
+body {
     font-family: "Lucida Grande", Verdana, Arial, sans-serif;
-    background: #fff;
     color: #333;
+    font-size: 10pt;
+    margin: 0 auto;
+    padding: 1em;
+    text-align: center;
+    width: 800px;
 }
 
 a {
     color: #693;
+}
+
+h1 {
+    background: url(/static/images/logo.png) no-repeat;
+    font-size: 18pt;
+    margin: 0 auto;
+    padding: 5px 0 20px 0;
+    width: 325px;
+}
+
+div#content {
+    float: left;
+    padding-bottom: 1em;
+    text-align: left;
+    width: 600px;
+}
+
+div#content h2 {
+    font-size: 14pt;
+    margin-bottom: 1em;
+}
+
+div.module {
+    border: 1px solid #333;
+    float: right;
+    padding: 2px;
+    text-align: left;
+    width: 190px;
+}
+
+div.module h2 {
+    background: #333;
+    color: #fafafa;
+    padding: .25em;
+}
+
+div#footer {
+    clear: both;
+    border-top: 1px solid #444;
+    font-size: 8pt;
+    padding-top: 1em;
 }

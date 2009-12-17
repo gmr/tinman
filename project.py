@@ -45,13 +45,19 @@ class Application(tornado.web.Application):
         # Our main handler list
         handlers = [
             (r"/", project.apps.Home),
-            (r".*", project.handler.ErrorHandler ) # Should always be last
+            # (r".*", project.handler.ErrorHandler ) # Should always be last,  breaks static serving however
+
         ]
+        
+        # Replace __base_path__ with the path this is running from
+        config['static_path'] = config['static_path'].replace('__base_path__', os.path.dirname(os.path.realpath(__file__)))
+        print config['static_path']
         
         # Site settings
         settings = dict(
             debug                      = config['debug'],
             cookie_secret              = config['cookie_secret'],
+            site_name                  = config['site_name'],
             static_path                = config['static_path'],
             ui_modules                 = project.modules,
             version                    = __version__,
@@ -175,33 +181,18 @@ if __name__ == "__main__":
  
             from logging.handlers import SysLogHandler
  
-            # Dictionary mappting for config string to class attribute
-            facilities = {
-                            'LOG_KERN': SysLogHandler.LOG_KERN,
-                            'LOG_USER': SysLogHandler.LOG_USER, 
-                            'LOG_MAIL': SysLogHandler.LOG_MAIL, 
-                            'LOG_DAEMON': SysLogHandler.LOG_DAEMON, 
-                            'LOG_AUTH': SysLogHandler.LOG_AUTH, 
-                            'LOG_LPR': SysLogHandler.LOG_LPR, 
-                            'LOG_NEWS': SysLogHandler.LOG_NEWS,
-                            'LOG_UUCP': SysLogHandler.LOG_UUCP, 
-                            'LOG_LOCAL0': SysLogHandler.LOG_LOCAL0,
-                            'LOG_LOCAL1': SysLogHandler.LOG_LOCAL1,
-                            'LOG_LOCAL2': SysLogHandler.LOG_LOCAL2,
-                            'LOG_LOCAL3': SysLogHandler.LOG_LOCAL3,
-                            'LOG_LOCAL4': SysLogHandler.LOG_LOCAL4,
-                            'LOG_LOCAL5': SysLogHandler.LOG_LOCAL5,
-                            'LOG_LOCAL6': SysLogHandler.LOG_LOCAL6,
-                            'LOG_LOCAL7': SysLogHandler.LOG_LOCAL7,
-                         }
+            if SysLogHandler.facility_names.has_key(config['Logging']['syslog']['facility']):
  
-            # Create the syslog handler            
-            logging_handler = SysLogHandler( address=config['Logging']['syslog']['address'], 
-                                             facility = facilities[config['Logging']['syslog']['facility']] )
+                # Create the syslog handler            
+                logging_handler = SysLogHandler( address=config['Logging']['syslog']['address'], 
+                                                 facility = SysLogHandler.facility_names[config['Logging']['syslog']['facility']] )
+                
+                # Add the handler
+                logger = logging.getLogger()
+                logger.addHandler(logging_handler)
             
-            # Add the handler
-            logger = logging.getLogger()
-            logger.addHandler(logging_handler)
+            else:
+                logging.error('%s: Invalid SysLog facility name specified, syslog logging aborted' % __appname__)
 
     # Fork our process to detach if not told to stay in foreground
     if not options.foreground:

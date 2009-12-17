@@ -3,7 +3,8 @@
 debug: True
 cookie_secret: this_isnt_very_secret_replace_me 
 no_keep_alive: False
-static_path: static/
+site_name: Tornado Project Stub
+static_path: __base_path__/static/
 xsrf_cookies: True
 ports: [8080,8081]
 

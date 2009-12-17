@@ -18,26 +18,28 @@ __email__   = "gavinmroy@gmail.com"
 __date__    = "2009-11-10"
 __version__ = 0.1
 
-
-import signal
-import multiprocessing
 import logging
-import yaml
+import multiprocessing
 import optparse
 import os
+import signal
 import sys
 import tornado.httpserver
 import tornado.ioloop
 import tornado.locale
 import tornado.web
+import yaml
 
 import project.apps
 import project.handler
 import project.modules
 
+# List to hold the child processes
+children = []
+
 class Application(tornado.web.Application):
  
-    def __init__(self):
+    def __init__(self, config):
         
         # Our main handler list
         handlers = [
@@ -47,36 +49,53 @@ class Application(tornado.web.Application):
         
         # Site settings
         settings = dict(
-            debug                      = True,
-            cookie_secret              = "some_value_here",
-            static_path                = "~/Source/tornado-project-stub/static",
+            debug                      = config['debug'],
+            cookie_secret              = config['cookie_secret'],
+            static_path                = config['static_path'],
             ui_modules                 = project.modules,
-            xsrf_cookies               = True
+            version                    = __version__,
+            xsrf_cookies               = config['xsrf_cookies']
         )
         
         tornado.web.Application.__init__(self, handlers, **settings)
 
-def runapp(runport):
-    try:
-        http_server = tornado.httpserver.HTTPServer(Application(), no_keep_alive = False)
-        http_server.listen(runport)
-        tornado.ioloop.IOLoop.instance().start()
-    except Exception as out:
-        print out
-        raise
 
-children = []
-def handle_sigterm(sig, frame): 
+def runapp(config, port):
+
+    try:
+        http_server = tornado.httpserver.HTTPServer(Application(config), no_keep_alive = config['no_keep_alive'])
+        http_server.listen(port)
+        tornado.ioloop.IOLoop.instance().start()
+
+    except KeyboardInterrupt:
+        shutdown()
+        
+    except Exception as out:
+        logging.error(out)
+        shutdown()
+        
+def shutdown():
+
+    logging.debug('Shutting down')
     for child in children:
-        if child.is_alive():
-            print "terminating child: ", child.name
-            child.terminate()
-    print "Terminating parent process..." 
+        try:
+            if child.is_alive():
+                logging.debug("terminating child: %s" % child.name)
+                child.terminate()
+        except AssertionError:
+            logging.error('Dead child encountered')
+
+    logging.debug('All children have shutdown, now terminating controlling application')
     sys.exit(0)
+
+
+def signal_handler(sig, frame): 
     
+    # We can shutdown from sigterm or keyboard interrupt so use a generic function
+    shutdown()
+
 
 if __name__ == "__main__":
-    multiprocessing.log_to_stderr()
 
     usage = "usage: %prog -c <configfile> [options]"
     version_string = "%%prog %s" % __version__
@@ -95,9 +114,6 @@ if __name__ == "__main__":
                         action="store_true", dest="foreground", default=False,
                         help="Run interactively in console for debugging purposes")                                                                                                                                             
 
-    parser.add_option("-p", "--port",
-                        action="store", dest="port", help="Specify the port to use")   
-
     # Parse our options and arguments                                                                        
     options, args = parser.parse_args()
     
@@ -105,9 +121,6 @@ if __name__ == "__main__":
         print "Please provide a configuration file"
         print usage
         sys.exit(1)
-
-    # get running mode (i.e. 'stage' or 'production' from config filename option
-    mode = options.config.split('/')[-1].split('.')[0]
 
     # try to load the config file. 
     try:
@@ -117,6 +130,56 @@ if __name__ == "__main__":
     except IOError:
         sys.stderr.write('Invalid or missing configuration file \"%s\"' % options.config)
         sys.exit(1)
+
+    # Set logging levels dictionary
+    logging_levels = { 
+                        'debug':    logging.DEBUG,
+                        'info':     logging.INFO,
+                        'warning':  logging.WARNING,
+                        'error':    logging.ERROR,
+                        'critical': logging.CRITICAL
+                     }
+    
+    # Get the logging value from the dictionary
+    logging_level = config['Logging']['level']
+    config['Logging']['level'] = logging_levels.get( config['Logging']['level'], 
+                                                     logging.NOTSET )
+ 
+    # If the user says verbose overwrite the settings.
+    if options.foreground:
+    
+        # Set the debugging level to verbose
+        config['Logging']['level'] = logging.DEBUG
+        
+        # If we have specified a file, remove it so logging info goes to stdout
+        if config['Logging'].has_key('filename'):
+            del config['Logging']['filename']
+ 
+    else:
+        # Build a specific path to our log file
+        if config['Logging'].has_key('filename'):
+            config['Logging']['filename'] = os.path.join( os.path.dirname(__file__), 
+                                                          config['Logging']['directory'], 
+                                                          config['Logging']['filename'] )
+        
+    # Pass in our logging config 
+    logging.basicConfig(**config['Logging'])
+    logging.info('Log level set to %s' % logging_level)
+ 
+    # If we have supported handler
+    if config['Logging'].has_key('handler'):
+        
+        # If we want to syslog
+        if config['Logging']['handler'] == 'syslog':
+ 
+            from logging.handlers import SysLogHandler
+ 
+            # Create the syslog handler            
+            logging_handler = SysLogHandler( address=config['Logging']['syslog']['address'], facility = SysLogHandler.LOG_LOCAL6 )
+            
+            # Add the handler
+            logger = logging.getLogger()
+            logger.addHandler(logging_handler)
 
     # Fork our process to detach if not told to stay in foreground
     if not options.foreground:
@@ -140,31 +203,32 @@ if __name__ == "__main__":
             sys.exit(1)
         
         # Detach from parent environment
-        os.chdir('/') 
+        os.chdir(os.path.dirname(__file__)) 
         os.setsid()
         os.umask(0) 
  
         # Close stdin            
         sys.stdin.close()
-        signal.signal(signal.SIGTERM, handle_sigterm) 
         
         # Redirect stdout, stderr
         sys.stdout = open('/dev/null', 'a')
         sys.stderr = open('/dev/null', 'a')
 
     # Load the locales
+    logging.debug('Loading translations')
     tornado.locale.load_translations(
         os.path.join(os.path.dirname(__file__), "translations"))
 
-    # Kick of the HTTP Server and Application                        
-    if options.port is not None:
-        http_server = tornado.httpserver.HTTPServer(Application(), no_keep_alive = False)
-        http_server.listen(int(options.port))
-        tornado.ioloop.IOLoop.instance().start()
-    else:
-        for p in config['tornado']['ports']:
-            proc = multiprocessing.Process(target=runapp, args=(p,))
-            proc.start()
-            children.append(proc)
+    # Handle signals
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler) 
 
+    # Tell multiprocessing we want to use logging
+    multiprocessing.get_logger()
 
+    # Kick off our application servers
+    for port in config['ports']:
+        logging.debug('Spawning application on port %i' % port)
+        proc = multiprocessing.Process(target=runapp, args=(config, port))
+        proc.start()
+        children.append(proc)       

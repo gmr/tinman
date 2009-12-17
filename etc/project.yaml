@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+debug: True
+cookie_secret: this_isnt_very_secret_replace_me 
+no_keep_alive: False
+static_path: static/
+xsrf_cookies: True
+ports: [8080,8081]
+
+Logging:
+    directory: logs
+    filename: log.txt
+    format: "%(levelname) -10s %(asctime)s %(message)s"
+    # Valid values: debug, info, warning, error, critical
+    level: debug
+#    handler: syslog
+#    syslog:
+#        address: localhost
+#        facility: LOCAL6       

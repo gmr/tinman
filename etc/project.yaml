@@ -16,4 +16,4 @@ Logging:
 #    handler: syslog
 #    syslog:
 #        address: localhost
-#        facility: LOCAL6       
+#        facility: LOG_LOCAL6       

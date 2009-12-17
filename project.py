@@ -218,7 +218,7 @@ if __name__ == "__main__":
             pid = os.fork() 
             if pid > 0:
                 # exit from second parent, print eventual PID before
-                logging.info('%s daemon has started - PID # %d.' % ( __appname__, pid ))
+                logging.info('%s: daemon has started - PID # %d.' % ( __appname__, pid ))
                 sys.exit(0) 
         except OSError, e:
             sys.stderr.write("Could not fork: %d (%s)\n" % (e.errno, e.strerror))
@@ -236,10 +236,10 @@ if __name__ == "__main__":
         sys.stdout = open('/dev/null', 'a')
         sys.stderr = open('/dev/null', 'a')
     else:
-        logging.info('%s  has started in interactive mode' % __appname__)
+        logging.info('%s: has started in interactive mode' % __appname__)
 
     # Load the locales
-    logging.debug('Loading translations')
+    logging.debug('%s: Loading translations' % __appname__)
     tornado.locale.load_translations(
         os.path.join(os.path.dirname(__file__), "translations"))
 
@@ -252,7 +252,7 @@ if __name__ == "__main__":
 
     # Kick off our application servers
     for port in config['ports']:
-        logging.info('%s spawning on port %i' % (__appname__, port))
+        logging.info('%s: spawning on port %i' % (__appname__, port))
         proc = multiprocessing.Process(target=runapp, args=(config, port))
         proc.start()
         children.append(proc)       

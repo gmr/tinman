@@ -17,7 +17,7 @@ __author__  = "Gavin M. Roy"
 __email__   = "gavinmroy@gmail.com"
 __date__    = "2009-11-10"
 __appname__ = 'project.py'
-__version__ = 0.1
+__version__ = '0.3'
 
 import logging
 import multiprocessing
@@ -31,10 +31,6 @@ import tornado.locale
 import tornado.web
 import yaml
 
-import project.apps
-import project.handler
-import project.modules
-
 # List to hold the child processes
 children = []
 
@@ -43,32 +39,67 @@ class Application(tornado.web.Application):
     def __init__(self, config):
         
         # Our main handler list
-        handlers = [
-            (r"/", project.apps.Home),
-            # (r".*", project.handler.ErrorHandler ) # Should always be last,  breaks static serving however
-        ]
+        handlers = []
+        for handler in config['RequestHandlers']:
+
+            # Split up our string containing the import and class
+            p = config['RequestHandlers'][handler].split('.')
+
+            # Handler must be in the format: foo.bar.baz where 
+            # foo is the import dir, bar is the file and baz is the class
+            if len(p) != 3:
+                logging.error('Import module name error')
+
+            # Build the import string            
+            s = '.'.join(p[0:len(p)-1])
+            
+            # Import the module, getting the file from the __dict__
+            m = __import__(s).__dict__['.'.join(p[1:len(p)-1])]
+            
+            # Get the handle to the class
+            h = getattr(m,p[len(p)-1:][0])
+
+            # Append our handle stack
+            handlers.append((handler, h))
+ 
+        # Get the dictionary from our YAML file
+        settings = config['Application']        
         
-        # Replace __base_path__ with the path this is running from
-        config['static_path'] = config['static_path'].replace('__base_path__', os.path.dirname(os.path.realpath(__file__)))
+        # Set the app version from the version setting in this file
+        settings['version'] = __version__
+
+        # If we have a static_path
+        if settings.has_key('static_path'):
+            # Replace __base_path__ with the path this is running from
+            settings['static_path'] = settings['static_path'].replace('__base_path__', 
+                                                                      os.path.dirname(os.path.realpath(__file__)))
+    
+        # If we specified the UI modules, we need to import it not pass a string
+        if settings.has_key('ui_modules'):
         
-        # Site settings
-        settings = dict(
-            debug                      = config['debug'],
-            cookie_secret              = config['cookie_secret'],
-            site_name                  = config['site_name'],
-            static_path                = config['static_path'],
-            ui_modules                 = project.modules,
-            version                    = __version__,
-            xsrf_cookies               = config['xsrf_cookies']
-        )
-        
+            # Split up our string containing the import and class
+            p = settings['ui_modules'].split('.')
+
+            # Module must be in the format: foo.bar
+            # foo is the import dir, bar is the file containing module classes
+            if len(p) != 2:
+                logging.error('Import module name error')
+
+            # Import the module, getting the file from the __dict__
+            m = __import__(settings['ui_modules']).__dict__[p[1]]
+            
+            # Assign the modules to the import
+            settings['ui_modules'] = m
+
+        # Create our Application for this process        
         tornado.web.Application.__init__(self, handlers, **settings)
 
 
 def runapp(config, port):
 
     try:
-        http_server = tornado.httpserver.HTTPServer(Application(config), no_keep_alive = config['no_keep_alive'])
+        http_server = tornado.httpserver.HTTPServer(Application(config), 
+                                                    no_keep_alive=config['HTTPServer']['no_keep_alive'])
         http_server.listen(port)
         tornado.ioloop.IOLoop.instance().start()
 
@@ -237,7 +268,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler) 
 
     # Kick off our application servers
-    for port in config['ports']:
+    for port in config['HTTPServer']['ports']:
         logging.info('%s: spawning on port %i' % (__appname__, port))
         proc = multiprocessing.Process(target=runapp, args=(config, port))
         proc.start()

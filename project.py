@@ -259,10 +259,13 @@ if __name__ == "__main__":
         logging.info('%s: has started in interactive mode' % __appname__)
 
     # Load the locales
-    logging.debug('%s: Loading translations' % __appname__)
-    tornado.locale.load_translations(
-        os.path.join(os.path.dirname(__file__), "translations"))
-
+    logging.info('%s: Loading translations' % __appname__)
+    try:
+        tornado.locale.load_translations(os.path.join(os.path.dirname(__file__), 
+                                         "translations"))
+    except OSError:
+        logging.info('%s: No translations found' % __appname__)
+        
     # Handle signals
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler) 

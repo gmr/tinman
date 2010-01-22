@@ -24,4 +24,8 @@ Logging:
 #        facility: local6
 
 RequestHandlers:
+<<<<<<< HEAD
     /: project.apps.Home
+=======
+    0: [/, project.apps.Home]
+>>>>>>> a328e447a376855d68e5192cdb1f5cc61ca3da83

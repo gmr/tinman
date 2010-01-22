@@ -53,11 +53,11 @@ class Application(tornado.web.Application):
             # Build the import string            
             s = '.'.join(p[0:-1])
             # Import the module, getting the file from the __dict__
-            logging.debug('Importing: %s.%s' % (s, p[-1:][0]))
+            logging.debug('Importing: %s.%s' % (s, p[-1]))
             m = __import__(s, fromlist=['.'.join(p[1:-1])])
             
             # Get the handle to the class
-            h = getattr(m,p[-1:][0])
+            h = getattr(m,p[-1])
 
             # Append our handle stack
             logging.debug('Appending handler for "%s": %s.%s' % (config['RequestHandlers'][handler][0], s, p[len(p)-1:][0]))

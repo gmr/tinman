@@ -60,7 +60,7 @@ class Application(tornado.web.Application):
             h = getattr(m,p[-1])
 
             # Append our handle stack
-            logging.debug('Appending handler for "%s": %s.%s' % (config['RequestHandlers'][handler][0], s, p[len(p)-1:][0]))
+            logging.debug('Appending handler for "%s": %s.%s' % (config['RequestHandlers'][handler][0], s, p[-1]))
             handlers.append((config['RequestHandlers'][handler][0], h))
  
         # Get the dictionary from our YAML file
@@ -87,7 +87,7 @@ class Application(tornado.web.Application):
                 logging.error('Import module name error')
 
             # Import the module, getting the file from the __dict__
-            m = __import__(settings['ui_modules']).__dict__[p[1]]
+            m = __import__(settings['ui_modules'], fromlist=[p[1]])
             
             # Assign the modules to the import
             settings['ui_modules'] = m

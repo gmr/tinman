@@ -1,13 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{locale.code}}" lang="{{locale.code}}">
     <head>
-        <title>{{handler.application.settings['site_name']}} ::{% block title %}
-            {% if title %}
-                {{_(title)}}        
-            {% else %}
-                {{_('Tornado Stub Application')}}
-            {% end %}
-        {% end %}</title>
+        <title>{% if 'title' in globals() and title %}{{title}}{% else %}{{_('Tornado Stub Application')}}{% end %}</title>
         <link rel="shortcut icon" href="/static/images/favicon.png" /> 
         <link rel="stylesheet" type="text/css" href="/static/css/reset-min.css" />              
         <link rel="stylesheet" type="text/css" href="/static/css/base.css" />
@@ -20,12 +14,12 @@
     <body>
         <h1>{{handler.application.settings['site_name']}}</h1>
         <div id="content">
-            <h2>{% if title %}{{_(title)}}{% else %}{{_('Tornado Stub Application')}}{% end %}</h2>
+            <h2>{% if 'title' in globals() and title %}{{title}}{% else %}{{_('Tornado Stub Application')}}{% end %}</h2>
             {% block content %}Un-Extended Template Content{% end %}
         </div>
         {{ modules.Generic() }}
         <div id="footer">
-            Tornado Stub Application bound to {{request.host}}
+            Tornado Stub Application v{{handler.application.settings['version']}} bound to {{request.host}}
         </div>
     </body>
 </html>

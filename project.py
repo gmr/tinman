@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Generic Tornado Application Controller
+Tinman Controller
 
 Copyright (c) 2009, Gavin M. Roy
 All rights reserved.
@@ -41,9 +41,9 @@ class Application(tornado.web.Application):
         # Our main handler list
         handlers = []
         for handler in config['RequestHandlers']:
-
+            
             # Split up our string containing the import and class
-            p = config['RequestHandlers'][handler].split('.')
+            p = config['RequestHandlers'][handler][1].split('.')
 
             # Handler must be in the format: foo.bar.baz where 
             # foo is the import dir, bar is the file and baz is the class
@@ -52,15 +52,17 @@ class Application(tornado.web.Application):
 
             # Build the import string            
             s = '.'.join(p[0:len(p)-1])
-            
+
             # Import the module, getting the file from the __dict__
+            logging.debug('Importing: %s.%s' % (s, p[len(p)-1:][0]))
             m = __import__(s).__dict__['.'.join(p[1:len(p)-1])]
             
             # Get the handle to the class
             h = getattr(m,p[len(p)-1:][0])
 
             # Append our handle stack
-            handlers.append((handler, h))
+            logging.debug('Appending handler for "%s": %s.%s' % (config['RequestHandlers'][handler][0], s, p[len(p)-1:][0]))
+            handlers.append((config['RequestHandlers'][handler][0], h))
  
         # Get the dictionary from our YAML file
         settings = config['Application']        

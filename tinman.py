@@ -51,13 +51,13 @@ class Application(tornado.web.Application):
                 logging.error('Import module name error')
 
             # Build the import string            
-            s = '.'.join(p[0:len(p)-1])
+            s = '.'.join(p[0:-1])
             # Import the module, getting the file from the __dict__
-            logging.debug('Importing: %s.%s' % (s, p[len(p)-1:][0]))
-            m = __import__(s).__dict__['.'.join(p[1:len(p)-1])]
+            logging.debug('Importing: %s.%s' % (s, p[-1:][0]))
+            m = __import__(s, fromlist=['.'.join(p[1:-1])])
             
             # Get the handle to the class
-            h = getattr(m,p[len(p)-1:][0])
+            h = getattr(m,p[-1:][0])
 
             # Append our handle stack
             logging.debug('Appending handler for "%s": %s.%s' % (config['RequestHandlers'][handler][0], s, p[len(p)-1:][0]))

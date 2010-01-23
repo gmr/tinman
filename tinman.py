@@ -61,7 +61,7 @@ class Application(tornado.web.Application):
 
             # Append our handle stack
             logging.debug('Appending handler for "%s": %s.%s' % (handler[0], s, p[-1]))
-            handlers.append(handler[0], h)
+            handlers.append((handler[0], h))
 
         # Get the dictionary from our YAML file
         settings = config['Application']        

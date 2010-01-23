@@ -37,13 +37,13 @@ children = []
 class Application(tornado.web.Application):
  
     def __init__(self, config):
-        
+
         # Our main handler list
         handlers = []
         for handler in config['RequestHandlers']:
-            
+
             # Split up our string containing the import and class
-            p = config['RequestHandlers'][handler][1].split('.')
+            p = handler[1].split('.')
 
             # Handler must be in the format: foo.bar.baz where 
             # foo is the import dir, bar is the file and baz is the class
@@ -55,17 +55,17 @@ class Application(tornado.web.Application):
             # Import the module, getting the file from the __dict__
             logging.debug('Importing: %s.%s' % (s, p[-1]))
             m = __import__(s, fromlist=['.'.join(p[1:-1])])
-            
+
             # Get the handle to the class
             h = getattr(m,p[-1])
 
             # Append our handle stack
-            logging.debug('Appending handler for "%s": %s.%s' % (config['RequestHandlers'][handler][0], s, p[-1]))
-            handlers.append((config['RequestHandlers'][handler][0], h))
- 
+            logging.debug('Appending handler for "%s": %s.%s' % (handler[0], s, p[-1]))
+            handlers.append(handler[0], h)
+
         # Get the dictionary from our YAML file
         settings = config['Application']        
-        
+
         # Set the app version from the version setting in this file
         settings['version'] = __version__
 

@@ -208,19 +208,28 @@ if __name__ == "__main__":
         
         # If we want to syslog
         if config['Logging']['handler'] == 'syslog':
- 
-            from logging.handlers import SysLogHandler
- 
-            if SysLogHandler.facility_names.has_key(config['Logging']['syslog']['facility']):
+            
+            facility = config['Logging']['syslog']['facility']
+            import logging.handlers as handlers
+            
+            # If we didn't type in the facility name
+            if handlers.SysLogHandler.facility_names.has_key(facility):
  
                 # Create the syslog handler            
-                logging_handler = SysLogHandler( address=config['Logging']['syslog']['address'], 
-                                                 facility = SysLogHandler.facility_names[config['Logging']['syslog']['facility']] )
+                syslog = handlers.SysLogHandler(address=config['Logging']['syslog']['address'], 
+                                                facility = handlers.SysLogHandler.facility_names[facility])
+
+                # Get the default logger
+                default_logger = logging.getLogger('')
                 
                 # Add the handler
-                logger = logging.getLogger()
-                logger.addHandler(logging_handler)
-            
+                default_logger.addHandler(syslog)
+                
+                # Remove the default stream handler
+                for handler in default_logger.handlers:
+                    if isinstance(handler, logging.StreamHandler):
+                        default_logger.removeHandler(handler)
+                
             else:
                 logging.error('%s: Invalid SysLog facility name specified, syslog logging aborted' % __appname__)
 

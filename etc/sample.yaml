@@ -2,10 +2,10 @@
 ---
 Application:
     debug: True
-    cookie_secret: this_isnt_very_secret_replace_me 
-    site_name: Tornado Project Stub
+    cookie_secret: this_isnt_very_secret_replace_me
+    site_name: Tinman
     static_path: __base_path__/static/
-    ui_modules: project.modules
+    ui_modules: tinman.modules
     xsrf_cookies: True
 
 HTTPServer:
@@ -24,4 +24,4 @@ Logging:
 #        facility: local6
 
 RequestHandlers:
-    - [/, project.apps.Home]
+    - [/, tinman.apps.Home]

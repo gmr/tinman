@@ -100,7 +100,8 @@ def runapp(config, port):
 
     try:
         http_server = tornado.httpserver.HTTPServer(Application(config), 
-                                                    no_keep_alive=config['HTTPServer']['no_keep_alive'])
+                                                    no_keep_alive=config['HTTPServer']['no_keep_alive'],
+                                                    xheaders=config['HTTPServer']['xheaders'])
         http_server.listen(port)
         tornado.ioloop.IOLoop.instance().start()
 
@@ -204,7 +205,7 @@ if __name__ == "__main__":
     logging.info('Log level set to %s' % logging_level)
  
     # If we have supported handler
-    if config['Logging'].has_key('handler'):
+    if config['Logging'].has_key('handler') and not options.foreground:
         
         # If we want to syslog
         if config['Logging']['handler'] == 'syslog':

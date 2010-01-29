@@ -16,7 +16,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 __author__  = "Gavin M. Roy"
 __email__   = "gavinmroy@gmail.com"
 __date__    = "2009-11-10"
-__appname__ = 'project.py'
+__appname__ = 'tinman'
 __version__ = '0.3'
 
 import logging
@@ -35,7 +35,7 @@ import yaml
 children = []
 
 class Application(tornado.web.Application):
- 
+
     def __init__(self, config):
 
         # Our main handler list
@@ -45,12 +45,12 @@ class Application(tornado.web.Application):
             # Split up our string containing the import and class
             p = handler[1].split('.')
 
-            # Handler must be in the format: foo.bar.baz where 
+            # Handler must be in the format: foo.bar.baz where
             # foo is the import dir, bar is the file and baz is the class
             if len(p) != 3:
                 logging.error('Import module name error')
 
-            # Build the import string            
+            # Build the import string
             s = '.'.join(p[0:-1])
             # Import the module, getting the file from the __dict__
             logging.debug('Importing: %s.%s' % (s, p[-1]))
@@ -64,7 +64,7 @@ class Application(tornado.web.Application):
             handlers.append((handler[0], h))
 
         # Get the dictionary from our YAML file
-        settings = config['Application']        
+        settings = config['Application']
 
         # Set the app version from the version setting in this file
         settings['version'] = __version__
@@ -72,12 +72,12 @@ class Application(tornado.web.Application):
         # If we have a static_path
         if settings.has_key('static_path'):
             # Replace __base_path__ with the path this is running from
-            settings['static_path'] = settings['static_path'].replace('__base_path__', 
+            settings['static_path'] = settings['static_path'].replace('__base_path__',
                                                                       os.path.dirname(os.path.realpath(__file__)))
-    
+
         # If we specified the UI modules, we need to import it not pass a string
         if settings.has_key('ui_modules'):
-        
+
             # Split up our string containing the import and class
             p = settings['ui_modules'].split('.')
 
@@ -88,11 +88,11 @@ class Application(tornado.web.Application):
 
             # Import the module, getting the file from the __dict__
             m = __import__(settings['ui_modules'], fromlist=[p[1]])
-            
+
             # Assign the modules to the import
             settings['ui_modules'] = m
 
-        # Create our Application for this process        
+        # Create our Application for this process
         tornado.web.Application.__init__(self, handlers, **settings)
 
 
@@ -107,11 +107,11 @@ def runapp(config, port):
 
     except KeyboardInterrupt:
         shutdown()
-        
+
     except Exception as out:
         logging.error(out)
         shutdown()
-        
+
 def shutdown():
 
     logging.debug('%s: shutting down' % __appname__)
@@ -127,8 +127,8 @@ def shutdown():
     sys.exit(0)
 
 
-def signal_handler(sig, frame): 
-    
+def signal_handler(sig, frame):
+
     # We can shutdown from sigterm or keyboard interrupt so use a generic function
     shutdown()
 
@@ -138,29 +138,29 @@ if __name__ == "__main__":
     usage = "usage: %prog -c <configfile> [options]"
     version_string = "%%prog %s" % __version__
     description = "Project Name"
-    
+
     # Create our parser and setup our command line options
     parser = optparse.OptionParser(usage=usage,
                          version=version_string,
                          description=description)
- 
+
     parser.add_option("-c", "--config",
                         action="store", dest="config",
-                        help="Specify the configuration file for use")            
-                               
+                        help="Specify the configuration file for use")
+
     parser.add_option("-f", "--foreground",
                         action="store_true", dest="foreground", default=False,
-                        help="Run interactively in console for debugging purposes")                                                                                                                                             
+                        help="Run interactively in console for debugging purposes")
 
-    # Parse our options and arguments                                                                        
+    # Parse our options and arguments
     options, args = parser.parse_args()
-    
+
     if options.config is None:
         sys.stderr.write('Missing configuration file\n')
         print usage
         sys.exit(1)
 
-    # try to load the config file. 
+    # try to load the config file.
     try:
         stream = file(options.config, 'r')
         config = yaml.load(stream)
@@ -170,67 +170,67 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Set logging levels dictionary
-    logging_levels = { 
+    logging_levels = {
                         'debug':    logging.DEBUG,
                         'info':     logging.INFO,
                         'warning':  logging.WARNING,
                         'error':    logging.ERROR,
                         'critical': logging.CRITICAL
                      }
-                     
+
     # Get the logging value from the dictionary
     logging_level = config['Logging']['level']
-    config['Logging']['level'] = logging_levels.get( config['Logging']['level'], 
+    config['Logging']['level'] = logging_levels.get( config['Logging']['level'],
                                                      logging.NOTSET )
- 
+
     # If the user says verbose overwrite the settings.
     if options.foreground:
-    
+
         # Set the debugging level to verbose
         config['Logging']['level'] = logging.DEBUG
-        
+
         # If we have specified a file, remove it so logging info goes to stdout
         if config['Logging'].has_key('filename'):
             del config['Logging']['filename']
- 
+
     else:
         # Build a specific path to our log file
         if config['Logging'].has_key('filename'):
-            config['Logging']['filename'] = os.path.join( os.path.dirname(__file__), 
-                                                          config['Logging']['directory'], 
+            config['Logging']['filename'] = os.path.join( os.path.dirname(__file__),
+                                                          config['Logging']['directory'],
                                                           config['Logging']['filename'] )
-        
-    # Pass in our logging config 
+
+    # Pass in our logging config
     logging.basicConfig(**config['Logging'])
     logging.info('Log level set to %s' % logging_level)
- 
+
     # If we have supported handler
     if config['Logging'].has_key('handler') and not options.foreground:
-        
+
         # If we want to syslog
         if config['Logging']['handler'] == 'syslog':
-            
+
             facility = config['Logging']['syslog']['facility']
             import logging.handlers as handlers
-            
+
             # If we didn't type in the facility name
             if handlers.SysLogHandler.facility_names.has_key(facility):
- 
-                # Create the syslog handler            
-                syslog = handlers.SysLogHandler(address=config['Logging']['syslog']['address'], 
+
+                # Create the syslog handler
+                syslog = handlers.SysLogHandler(address=config['Logging']['syslog']['address'],
                                                 facility = handlers.SysLogHandler.facility_names[facility])
 
                 # Get the default logger
                 default_logger = logging.getLogger('')
-                
+
                 # Add the handler
                 default_logger.addHandler(syslog)
-                
+
                 # Remove the default stream handler
                 for handler in default_logger.handlers:
                     if isinstance(handler, logging.StreamHandler):
                         default_logger.removeHandler(handler)
-                
+
             else:
                 logging.error('%s: Invalid SysLog facility name specified, syslog logging aborted' % __appname__)
 
@@ -239,30 +239,38 @@ if __name__ == "__main__":
         try:
             pid = os.fork()
             if pid > 0:
-                sys.exit(0)                        
+                sys.exit(0)
         except OSError, e:
             sys.stderr.write("Could not fork: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
-        
+
         # Second fork to put into daemon mode
-        try: 
-            pid = os.fork() 
+        try:
+            pid = os.fork()
             if pid > 0:
                 # exit from second parent, print eventual PID before
-                logging.info('%s: daemon has started - PID # %d.' % ( __appname__, pid ))
-                sys.exit(0) 
+                print '%s: daemon has started - PID # %d.' % ( __appname__, pid )
+
+                # Write a pidfile out
+                filename = os.path.join(os.path.dirname(__file__), "pids/%s.pid" % __appname__)
+                with open(filename, 'w') as pid_file:
+                    pid_file.write('%i\n' % pid)
+                    pid_file.close()
+                
+                # Exit the parent project
+                sys.exit(0)
         except OSError, e:
             sys.stderr.write("Could not fork: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
-        
+
         # Detach from parent environment
-        os.chdir(os.path.dirname(__file__)) 
+        os.chdir(os.path.dirname(__file__))
         os.setsid()
-        os.umask(0) 
- 
-        # Close stdin            
+        os.umask(0)
+
+        # Close stdin
         sys.stdin.close()
-        
+
         # Redirect stdout, stderr
         sys.stdout = open('/dev/null', 'a')
         sys.stderr = open('/dev/null', 'a')
@@ -272,18 +280,18 @@ if __name__ == "__main__":
     # Load the locales
     logging.info('%s: Loading translations' % __appname__)
     try:
-        tornado.locale.load_translations(os.path.join(os.path.dirname(__file__), 
+        tornado.locale.load_translations(os.path.join(os.path.dirname(__file__),
                                          "translations"))
     except OSError:
         logging.info('%s: No translations found' % __appname__)
-        
+
     # Handle signals
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler) 
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Kick off our application servers
     for port in config['HTTPServer']['ports']:
         logging.info('%s: spawning on port %i' % (__appname__, port))
         proc = multiprocessing.Process(target=runapp, args=(config, port))
         proc.start()
-        children.append(proc)       
+        children.append(proc)

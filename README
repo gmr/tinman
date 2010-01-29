@@ -2,10 +2,6 @@ The goal of this is to provide an empty, stub project that works out of the box 
 
 Instructions:
 
-1) Install Tornado and its pre-requisits
-2) Clone this app
-3) ./tinman.py -c
-
-You'd want to rename the dirs, set the variables in project.py and you should be good to go. It doesn't have authentication or user sessions on purpose but I may add that at some point. 
-
-I found I was doing the same things with each tornado app, so I figured why not make the base stub.  Enjoy!
+1) Install Tornado and its prerequisites
+2) To validate it works out of the box: "./tinman.py -c sample.yaml -f"
+3) Start extending for your own purposes

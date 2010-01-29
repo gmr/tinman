@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Project UI Modules
+Tinman UI Modules
 
 """
 

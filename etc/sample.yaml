@@ -8,6 +8,10 @@ Application:
     ui_modules: tinman.modules
     xsrf_cookies: True
 
+    Data:
+        SQLAlchemy:
+            url: postgresql://www@localhost:5432/www
+
 HTTPServer:
     no_keep_alive: False
     ports: [8080,8081]

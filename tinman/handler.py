@@ -10,6 +10,7 @@ __date__    = "2009-11-10"
 __version__ = 0.3
 
 import httplib
+import logging
 import tinman.data
 import tornado.locale
 import tornado.web
@@ -27,10 +28,21 @@ class ErrorHandler(tornado.web.RequestHandler):
 
 class RequestHandler(tornado.web.RequestHandler):
 
-#    def get_current_user(self):
-#        user_id = self.get_secure_cookie("user")
-#        if not user_id: return None
-#        return self.backend.get_user_by_id(user_id)
+    def __init__(self, application, request, transforms=None):
+    
+        # Init the parent class
+        super( RequestHandler, self ).__init__(application, request, transforms)
+ 
+        logging.debug('New Instance of %s' % self.__class__.__name__)
+        
+        # Create a new instance of the data layer
+        self.data = tinman.data.DataLayer(application.settings['Data'])
+        
+    def get_current_user(self):
+        user_id = self.get_secure_cookie("user")
+        if not user_id: 
+            return None
+#        return self.data.get_user_by_id(user_id)
 
     def get_error_html(self, status_code):
         """

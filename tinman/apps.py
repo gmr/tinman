@@ -17,7 +17,7 @@ class Home(handler.RequestHandler):
 
     def get(self):
         
-        gmr = user.User()
+        gmr = user.TinmanUser()
 
         self.data.create_all()        
         self.render('templates/apps/home.html');

@@ -45,7 +45,12 @@ class DataLayer:
 class Model(object):
     
     # SQL Alchemy Model to be extended
-    from sqlalchemy import schema, Table, Column, Integer, String, MetaData, ForeignKey
+    from sqlalchemy import Table, Column, MetaData, ForeignKey, \
+                            Boolean, Date, DateTime, Float, Integer, String, \
+                            Interval, LargeBinary, Numeric, SmallInteger, \
+                            Text, Unicode, UnicodeText
+
+    schema_name = None
 
     def __init__(self):
         
@@ -60,9 +65,12 @@ class Model(object):
             # Assign our table instance stored in the global driver stack
             self.table = driver['models'][table_name]
             return
-                
+        
+        if not self.schema_name:
+            self.schema_name = 'public'
+        
         # Create our table object
-        self.table = self.Table(table_name, driver['metadata'])
+        self.table = self.Table(table_name, driver['metadata'], schema=self.schema_name)
         
         # Iterate through the attributes to add schema to the table
         for attr in self.__class__.__dict__:
@@ -71,3 +79,6 @@ class Model(object):
 
         # Pop this handle in the global driver stack    
         driver['models'][table_name] = self.table
+        
+    def create():
+        self.table.create()

@@ -19,5 +19,10 @@ class Home(handler.RequestHandler):
         
         gmr = user.TinmanUser()
 
-        self.data.create_all()        
+        #self.data.create_all()      
+        gmr.username = 'gmr'
+        gmr.email = 'gavinmroy@gmail.com'
+        gmr.password = 'foo'
+        gmr.save()
+          
         self.render('templates/apps/home.html');

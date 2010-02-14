@@ -8,6 +8,7 @@ __email__   = "gavinmroy@gmail.com"
 __date__    = "2010-02-07"
 __version__ = 0.1
 
+from new import classobj 
 import logging
 
 # A persistent dictionary for our database connection and elements
@@ -16,9 +17,9 @@ driver = {'models': {}}
 class DataLayer:
 
     def __init__(self, configuration):
-    
+
         global driver
-        
+
         # Carry the configuration in the document
         self.configuration = configuration
 
@@ -26,24 +27,24 @@ class DataLayer:
         if self.configuration.has_key('SQLAlchemy'):
             import sqlalchemy
             import sqlalchemy.orm
-            
+
             if not driver.has_key('engine'):
                 logging.debug('Creating new SQLAlchemy engine instance')
                 driver['engine'] = sqlalchemy.create_engine(self.configuration['SQLAlchemy']['url'])
-                driver['session'] = sqlalchemy.orm.sessionmaker(bind=driver['engine'])
-                driver['metadata'] = sqlalchemy.MetaData()
-                driver['metadata'].bind = driver['engine']
-                
+                session = sqlalchemy.orm.sessionmaker(bind=driver['engine'])
+                driver['session'] = session()
+                driver['metadata'] = sqlalchemy.MetaData(bind=driver['engine'])
+
         else:
             logging.error('Unknown data driver type')
-    
+
     def create_all(self):
         global driver
         driver['metadata'].create_all()
-    
-            
+
+
 class Model(object):
-    
+
     # SQL Alchemy Model to be extended
     from sqlalchemy import Table, Column, MetaData, ForeignKey, \
                             Boolean, Date, DateTime, Float, Integer, String, \
@@ -53,32 +54,58 @@ class Model(object):
     schema_name = None
 
     def __init__(self):
-        
+        from sqlalchemy.orm import mapper
+
         # Get the driver
         global driver
-    
+
         table_name = self.__class__.__name__.lower()
-    
+
         # Look to see if the class already has our instance
         if driver['models'].has_key(table_name):
-        
+
             # Assign our table instance stored in the global driver stack
             self.table = driver['models'][table_name]
             return
-        
+
         if not self.schema_name:
             self.schema_name = 'public'
-        
+
         # Create our table object
         self.table = self.Table(table_name, driver['metadata'], schema=self.schema_name)
-        
+
+        # A dict of our columns
+        self.columns = {}
+
         # Iterate through the attributes to add schema to the table
         for attr in self.__class__.__dict__:
             if type(self.__class__.__dict__[attr]).__name__ == 'Column':
                 self.table.append_column(self.__class__.__dict__[attr])
+                self.columns[attr] = None
+    
+        # Dynamically create or data object
+        DataObject = type('DataObject',(object,),self.columns)
 
-        # Pop this handle in the global driver stack    
+        # Map the dynamic object
+        mapper(DataObject, self.table)
+
+        # Create our internal object to use for data manipulation
+        self.obj = DataObject()
+
+        # Pop this handle in the global driver stack
         driver['models'][table_name] = self.table
         
-    def create():
+       
+
+    def create(self):
         self.table.create()
+
+    def save(self):
+        global driver
+        
+        for column in self.columns:
+            if self.__dict__.has_key(column):
+                self.obj.__dict__[column] = self.__dict__[column]
+        
+        driver['session'].add(self.obj)
+        driver['session'].commit()

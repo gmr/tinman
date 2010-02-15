@@ -16,13 +16,5 @@ import tinman.handler as handler
 class Home(handler.RequestHandler):
 
     def get(self):
-        
-        gmr = user.TinmanUser()
 
-        #self.data.create_all()      
-        gmr.username = 'gmr'
-        gmr.email = 'gavinmroy@gmail.com'
-        gmr.password = 'foo'
-        gmr.save()
-          
         self.render('templates/apps/home.html');

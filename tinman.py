@@ -99,7 +99,7 @@ class Application(tornado.web.Application):
 def runapp(config, port):
 
     try:
-        http_server = tornado.httpserver.HTTPServer(Application(config), 
+        http_server = tornado.httpserver.HTTPServer(Application(config),
                                                     no_keep_alive=config['HTTPServer']['no_keep_alive'],
                                                     xheaders=config['HTTPServer']['xheaders'])
         http_server.listen(port)
@@ -165,18 +165,19 @@ if __name__ == "__main__":
         stream = file(options.config, 'r')
         config = yaml.load(stream)
         stream.close()
-    except IOError:
-        sys.stderr.write('Invalid or missing configuration file "%s"\n' % options.config)
+    except IOError, err:
+        sys.stderr.write('Configuration file not found "%s"\n' % options.config)
+        sys.exit(1)
+    except yaml.scanner.ScannerError, err:
+        sys.stderr.write('Invalid configuration file "%s":\n%s\n' % (options.config, err))
         sys.exit(1)
 
     # Set logging levels dictionary
-    logging_levels = {
-                        'debug':    logging.DEBUG,
-                        'info':     logging.INFO,
-                        'warning':  logging.WARNING,
-                        'error':    logging.ERROR,
-                        'critical': logging.CRITICAL
-                     }
+    logging_levels = { 'debug':    logging.DEBUG,
+                       'info':     logging.INFO,
+                       'warning':  logging.WARNING,
+                       'error':    logging.ERROR,
+                       'critical': logging.CRITICAL }
 
     # Get the logging value from the dictionary
     logging_level = config['Logging']['level']
@@ -256,7 +257,7 @@ if __name__ == "__main__":
                 with open(filename, 'w') as pid_file:
                     pid_file.write('%i\n' % pid)
                     pid_file.close()
-                
+
                 # Exit the parent project
                 sys.exit(0)
         except OSError, e:

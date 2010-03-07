@@ -29,18 +29,18 @@ class ErrorHandler(tornado.web.RequestHandler):
 class RequestHandler(tornado.web.RequestHandler):
 
     def __init__(self, application, request, transforms=None):
-    
+
         # Init the parent class
         super( RequestHandler, self ).__init__(application, request, transforms)
- 
+
         logging.debug('New Instance of %s' % self.__class__.__name__)
-        
+
         # Create a new instance of the data layer
         self.data = tinman.data.DataLayer(application.settings['Data'])
-        
+
     def get_current_user(self):
         user_id = self.get_secure_cookie("user")
-        if not user_id: 
+        if not user_id:
             return None
 #        return self.data.get_user_by_id(user_id)
 

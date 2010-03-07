@@ -10,7 +10,6 @@ __date__    = "2009-11-10"
 __version__ = 0.1
 
 import tinman.data as data
-import tinman.models.user as user
 import tinman.handler as handler
 
 class Home(handler.RequestHandler):

@@ -66,7 +66,6 @@ class Session:
         if key not in self.protected:
             logging.debug('Adding "%s" to the session dictionary' % key)
             self.values[key] = value
-            print self.values[key]
         else:
             # Set the attribute in the object dict
             self.__dict__[key] = value
@@ -86,7 +85,7 @@ class Session:
         if self.settings['type'] == 'file':
 
             # Create the full path to the session file
-            session_file = '%s/%s' % ( self.path, self.id )
+            session_file = '/'.join([self.path, self.id])
             logging.debug('Loading contents of session file: %s' % session_file)
             try:
                 with open(session_file, 'r') as f:
@@ -104,9 +103,9 @@ class Session:
     def _new(self):
         """ Create a new session ID and set the session cookie """
         # Create a string we can hash that should be fairly unique to the request
-        s = '%s:%s:%s' % ( self.handler.request.remote_ip,
-                           self.handler.request.headers['User-Agent'],
-                           datetime.datetime.today() )
+        s = ':'.join([self.handler.request.remote_ip,
+                      self.handler.request.headers['User-Agent'],
+                      datetime.datetime.today()])
 
         # Build the sha1 based session id
         h = hashlib.sha1()
@@ -136,7 +135,7 @@ class Session:
         if self.settings['type'] == 'file':
 
             # Create the full path to the session file
-            session_file = '%s/%s' % ( self.path, self.id )
+            session_file = '/'.join([self.path, self.id])
             logging.debug('Removing cleared session file: %s' % session_file)
 
             # Unlink the file
@@ -151,7 +150,7 @@ class Session:
         if self.settings['type'] == 'file':
 
             # Create the full path to the session file
-            session_file = '%s/%s' % ( self.path, self.id )
+            session_file = '/'.join([self.path, self.id])
             logging.debug('Writing contents of session file: %s' % session_file)
             try:
                 with open(session_file, 'w') as f:

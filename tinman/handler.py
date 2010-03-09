@@ -42,13 +42,12 @@ class RequestHandler(tornado.web.RequestHandler):
         # Create a new instance of the session handler
         self.session = tinman.session.Session(self)
 
-        print self.session.started
-
     def get_current_user(self):
 
         try:
             user_id = self.session.user_id
         except AttributeError:
+            # The session isn't tied to a user so just return none
             return None
 
 #        return self.data.get_user_by_id(user_id)

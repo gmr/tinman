@@ -5,7 +5,7 @@ Application:
     cookie_secret: this_isnt_very_secret_replace_me
     site_name: Tinman
     description: A web development framework based upon Tornado
-    static_path: __base_path__/static/
+    static_path: __base_path__/tinman/static/
     ui_modules: tinman.modules
     xsrf_cookies: True
 

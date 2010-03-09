@@ -14,6 +14,34 @@ import logging
 import os
 import pickle
 
+class Cleanup:
+    """ File Based Session Cleanup Class """
+
+    def __init__(self, settings, base_path):
+
+        # If our storage type is file, set the base path for the session file
+        if settings['type'] == 'file':
+            self.path = settings['directory'].replace('__base_path__', base_path)
+
+        # Get the number of seconds that must be exceeded for a stale connection
+        self.max_age = 86400 * settings['duration']
+
+    def process(self):
+
+        import time
+
+        logging.info('Processing %s for stale session files older than %i seconds' % (self.path, self.max_age))
+        for root, dirs, files in os.walk(self.path):
+            for file in files:
+                path = '/'.join([self.path, file])
+                stat = os.stat(path)
+                min_age = time.mktime(datetime.datetime.now().timetuple()) - self.max_age
+                if stat.st_mtime < min_age:
+                    age = time.mktime(datetime.datetime.now().timetuple()) - stat.st_mtime
+                    logging.info('Removing %s, last updated %i seconds ago' %
+                                 (file, age))
+                    os.unlink(path)
+
 class Session:
 
     # List of attributes to not store in session dictionary
@@ -48,6 +76,10 @@ class Session:
             self._load()
         else:
             self.id = self._new()
+
+            # Save the initial session
+            self.save()
+
 
     def __delattr__(self, key):
 
@@ -105,7 +137,7 @@ class Session:
         # Create a string we can hash that should be fairly unique to the request
         s = ':'.join([self.handler.request.remote_ip,
                       self.handler.request.headers['User-Agent'],
-                      datetime.datetime.today()])
+                      str(datetime.datetime.today())])
 
         # Build the sha1 based session id
         h = hashlib.sha1()
@@ -119,9 +151,6 @@ class Session:
 
         # Set the session start time
         self.started = datetime.datetime.now()
-
-        # Save the initial session
-        self.save()
 
         # Return the session id
         return id
@@ -158,3 +187,59 @@ class Session:
                 f.closed
             except IOError:
                 logging.error('Could not write to session file: %s' % session_file)
+
+if __name__ == "__main__":
+
+    import optparse
+    import sys
+    import yaml
+
+    usage = "usage: session.py -c <configfile>"
+    version_string = "session.py %s" % __version__
+    description = "Run cleanup of stale session files when using file based session storage."
+
+    # Create our parser and setup our command line options
+    parser = optparse.OptionParser(usage=usage,
+                         version=version_string,
+                         description=description)
+
+    parser.add_option("-p", "--path",
+                        action="store", dest="path",
+                        help="Base path for Tinman install")
+    parser.add_option("-c", "--config",
+                        action="store", dest="config",
+                        help="Specify the configuration file for use")
+
+    # Parse our options and arguments
+    options, args = parser.parse_args()
+
+    if options.config is None:
+        sys.stderr.write('Missing configuration file\n')
+        print usage
+        sys.exit(1)
+
+    if options.path is None:
+        sys.stderr.write('You must specify the base path for your Tinman install\n')
+        print usage
+        sys.exit(1)
+
+    # try to load the config file.
+    try:
+        stream = file(options.config, 'r')
+        config = yaml.load(stream)
+        stream.close()
+    except IOError, err:
+        sys.stderr.write('Configuration file not found "%s"\n' % options.config)
+        sys.exit(1)
+    except yaml.scanner.ScannerError, err:
+        sys.stderr.write('Invalid configuration file "%s":\n%s\n' % (options.config, err))
+        sys.exit(1)
+
+    # Set the logging level to debug
+    settings = {'level': logging.DEBUG}
+    logging.basicConfig(**settings)
+
+    logging.info('Tinman session file cleanup running')
+
+    cleanup = Cleanup(config['Application']['Session'], options.path)
+    cleanup.process()

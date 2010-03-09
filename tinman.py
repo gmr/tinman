@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     usage = "usage: %prog -c <configfile> [options]"
     version_string = "%%prog %s" % __version__
-    description = "Tinman is a meta-framework on top of Tornado"
+    description = "A Web Development Framework based upon Tornado"
 
     # Create our parser and setup our command line options
     parser = optparse.OptionParser(usage=usage,

@@ -12,14 +12,16 @@
         </script>
     </head>
     <body>
-        <h1>{{handler.application.settings['site_name']}}</h1>
+        <div id="header">
+            <img id="tinman" src="/static/images/header_tinman.png" alt="" />
+            <h1>{{handler.application.settings['site_name']}}: {{handler.application.settings['description']}}</h1>
+        </div>
         <div id="content">
-            <h2>{% if 'title' in globals() and title %}{{title}}{% else %}{{_('Tinman')}}{% end %}</h2>
             {% block content %}Un-Extended Template Content{% end %}
         </div>
-        {{ modules.Generic() }}
         <div id="footer">
             Tinman v{{handler.application.settings['version']}} bound to {{request.host}}
         </div>
+        <a id="tornado" href="http://tornadoweb.org"><img src="/static/images/tornado.png" alt="Powered by Tornado" /></a>
     </body>
 </html>

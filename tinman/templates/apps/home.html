@@ -1,4 +1,24 @@
 {% extends "../base.html" %}
 {% block content %}
-Homepage Content
+<h2>Congratulations!</h2>
+<p>You have successfully installed Tinman and all of its prerequisites.</p>
+<h3>Next Steps:</h3>
+<ol>
+    <li>Run &ldquo;manage.py start projectname&rdquo;</li>
+    <li>Modify the base configuration file at etc/projectname.yaml</li>
+    <li>Modify the base template in projectname/templates/base.html</li>
+    <li>Start building out your Request Handlers</li>
+</ol>
+<h3>Tinman&rsquo;s Features Include:</h3>
+<ul>
+    <li>Memcache support with caching decorators</li>
+    <li>Multiple data backends supported, including:
+        <ul>
+             <li><a href="http://mongodb.org">MongoDB</a></li>
+             <li><a href="http://sqlalchemy.org">SQL Alchemy</a> (<a href="http://postgresql.org">PostgreSQL</a>, <a href="http://mysql.com">MySQL</a>, etc)</li>
+        </ul>
+    </li>
+    <li>Built-in session support</li>
+    <li>Pre-built user model including auth support for Google, Facebook and Twitter</li>
+</ul>
 {% end %}

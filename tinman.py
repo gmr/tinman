@@ -69,11 +69,14 @@ class Application(tornado.web.Application):
         # Set the app version from the version setting in this file
         settings['version'] = __version__
 
+        # Set the base path for use inside the app since all code locations are not relative
+        settings['base_path'] = os.path.dirname(os.path.realpath(__file__))
+
         # If we have a static_path
         if settings.has_key('static_path'):
             # Replace __base_path__ with the path this is running from
             settings['static_path'] = settings['static_path'].replace('__base_path__',
-                                                                      os.path.dirname(os.path.realpath(__file__)))
+                                                                      settings['base_path'])
 
         # If we specified the UI modules, we need to import it not pass a string
         if settings.has_key('ui_modules'):

@@ -39,8 +39,6 @@ class DataLayer:
             else:
                 logging.error('Connection is missing the driver setting')
 
-        print connections
-
     def commit(self):
         global connections
         for connection in connection:

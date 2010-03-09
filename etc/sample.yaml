@@ -13,6 +13,18 @@ Application:
             name: localhost,
             dsn: "postgresql://www@localhost:5432/www" }
 
+    Session:
+        # Valid values: file,memcache
+        type: file
+        # If type is file
+        directory: __base_path__/sessions
+        # If type is memcache
+        #servers = [('127.0.0.1',11211)]
+        
+        # Duration is in # of days, make a session last two hours
+        duration: 0.083
+        cookie_name: session
+
 HTTPServer:
     no_keep_alive: False
     ports: [8080,8081]

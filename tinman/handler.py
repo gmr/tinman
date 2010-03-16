@@ -11,6 +11,7 @@ __version__ = 0.3
 
 import httplib
 import logging
+import tinman.cache
 import tinman.data
 import tinman.session
 import tornado.locale
@@ -37,20 +38,27 @@ class RequestHandler(tornado.web.RequestHandler):
         logging.debug('New Instance of %s' % self.__class__.__name__)
 
         # Create a new instance of the data layer
-        self.data = tinman.data.DataLayer(application.settings['Data'])
+        if application.settings.has_key('Data'):
+            self.data = tinman.data.DataLayer(application.settings['Data'])
+
+        # Connect to the caching layer
+        if application.settings.has_key('Memcache'):
+            self.cache = tinman.cache.Cache(application.settings['Memcache'])
 
         # Create a new instance of the session handler
-        self.session = tinman.session.Session(self)
+        if application.settings.has_key('Session'):
+            self.session = tinman.session.Session(self)
 
     def get_current_user(self):
 
         try:
-            user_id = self.session.user_id
+            username = self.session.username
         except AttributeError:
             # The session isn't tied to a user so just return none
             return None
-
-#        return self.data.get_user_by_id(user_id)
+        
+        # We have a valid user object
+        return username
 
     def get_error_html(self, status_code):
         """

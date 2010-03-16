@@ -49,16 +49,24 @@ def memoize(fn):
 
     return wrapper
 
+
 class Cache:
 
     def __init__(self, settings):
-        global config, client
+        global client
+        client = memcache.Client(settings['connection'], debug=0)
 
-        # Create our memcache servers
-        if not client:
-            logging.debug('Creating a new memcache Client instance')
-            config = settings
-            client = memcache.Client(config['servers'], debug=0)
+    def delete(self, key):
+        global connections
+        return client.delete(key)
+
+    def get(self, key):
+        global connections
+        return client.get(key)
+
+    def set(self, key, value, duration):
+        global connections
+        return client.set(key, value, duration)
 
     def delete_decorator_item(self, classname, function, parameters):
         global config

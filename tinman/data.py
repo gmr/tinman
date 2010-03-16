@@ -15,6 +15,8 @@ connections = {}
 
 class DataLayer:
 
+    session = None
+
     def __init__(self, configuration):
 
         global connections
@@ -34,25 +36,41 @@ class DataLayer:
                         session = sqlalchemy.orm.sessionmaker(bind=connections[connection['name']]['engine'])
                         connections[connection['name']]['session'] = session()
                         connections[connection['name']]['metadata'] = sqlalchemy.MetaData(bind=connections[connection['name']]['engine'])
+                        if not self.session:
+                            logging.debug('Setting default session to "%s"' % connection['name'])
+                            self.session = connections[connection['name']]['session']
                 else:
                     logging.error('Unknown data driver type')
             else:
                 logging.error('Connection is missing the driver setting')
 
+    def bind_module(self, connection_name, module):
+        logging.debug('Binding %s to %s' % (module, connection_name))
+        module.metadata.bind = connections[connection_name]['engine']
+
     def commit(self):
         global connections
-        for connection in connection:
-            if connection['driver'] == 'SQLAlchemy':
-                connection['session'].commit()
+        for connection in connections:
+            if connections[connection]['driver'] == 'SQLAlchemy':
+                logging.debug('Committing session "%s"' % connection)
+                connections[connection]['session'].commit()
 
     def create_all(self):
         global connections
         for connection in connection:
-            if connection['driver'] == 'SQLAlchemy':
-                connection['metadata'].create_all()
+            if connections[connection]['driver'] == 'SQLAlchemy':
+                logging.debug('Creating all for session "%s"' % connection)
+                connections[connection]['session'].commit()
 
     def flush(self):
         global connections
         for connection in connection:
-            if connection['driver'] == 'SQLAlchemy':
-                connection['session'].flush()
+            if connections[connection]['driver'] == 'SQLAlchemy':
+                logging.debug('Flushing session "%s"' % connection)
+                connections[connection]['session'].commit()
+
+    def set_session(self, connection_name):
+        global connections
+        logging.debug('Setting active data session to "%s"' % connection_name)
+        self.session = connections[connection_name]['session']
+

@@ -27,9 +27,7 @@ class Cleanup:
         self.max_age = 86400 * settings['duration']
 
     def process(self):
-
         import time
-
         logging.info('Processing %s for stale session files older than %i seconds' % (self.path, self.max_age))
         for root, dirs, files in os.walk(self.path):
             for file in files:
@@ -79,7 +77,6 @@ class Session:
 
             # Save the initial session
             self.save()
-
 
     def __delattr__(self, key):
 

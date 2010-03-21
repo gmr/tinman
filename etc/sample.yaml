@@ -12,7 +12,8 @@ Application:
     Data:
         - { driver: SQLAlchemy,
             name: localhost,
-            dsn: "postgresql://www@localhost:5432/www" }
+            dsn: "postgresql://www@localhost:5432/www",
+            session: {autocommit: True} }
 
     Session:
         # Valid values: file,memcache

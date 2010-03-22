@@ -131,6 +131,10 @@ class Session:
 
     def _new(self):
         """ Create a new session ID and set the session cookie """
+        
+        if not self.handler.request.headers.has_key('User-Agent'):
+            self.handler.request.headers['User-Agent'] = 'Not Set'
+        
         # Create a string we can hash that should be fairly unique to the request
         s = ':'.join([self.handler.request.remote_ip,
                       self.handler.request.headers['User-Agent'],

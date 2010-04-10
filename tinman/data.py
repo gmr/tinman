@@ -85,7 +85,7 @@ class DataLayer:
         for connection in connections:
             if connections[connection]['driver'] == 'SQLAlchemy':
                 logging.debug('Creating all for session "%s"' % connection)
-                connections[connection]['session'].create_all()
+                connections[connection]['metadata'].create_all()
 
     def dirty(self, connection_name=None):
         global connections

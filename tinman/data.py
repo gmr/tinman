@@ -45,9 +45,10 @@ class DataLayer:
                                                               autoflush=True)
                         connections[connection['name']]['session'] = session()
                         connections[connection['name']]['metadata'] = sqlalchemy.MetaData(bind=connections[connection['name']]['engine'])
-                        if not self.session:
-                            logging.debug('Setting default session to "%s"' % connection['name'])
-                            self.session = connections[connection['name']]['session']
+
+                    if not self.session:
+                        logging.debug('Setting default session to "%s"' % connection['name'])
+                        self.session = connections[connection['name']]['session']
                 else:
                     logging.error('Unknown data driver type')
             else:

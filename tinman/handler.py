@@ -56,7 +56,7 @@ class RequestHandler(tornado.web.RequestHandler):
         except AttributeError:
             # The session isn't tied to a user so just return none
             return None
-        
+
         # We have a valid user object
         return username
 

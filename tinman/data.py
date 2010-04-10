@@ -29,19 +29,19 @@ class DataLayer:
                 if connection['driver'] == 'SQLAlchemy':
                     import sqlalchemy
                     import sqlalchemy.orm
-                    
+
                     # Use auto-commit based upon config file
                     auto_commit = False
                     if connection.has_key('session'):
                         if connection['session'].has_key('autocommit'):
                             auto_commit = connection['session']['autocommit']
-                    
+
                     if not connections.has_key(connection['name']):
                         connections[connection['name']] = {'driver': connection['driver']}
                         logging.debug('Creating new SQLAlchemy engine instance')
                         connections[connection['name']]['engine'] = sqlalchemy.create_engine(connection['dsn'])
-                        session = sqlalchemy.orm.sessionmaker(bind=connections[connection['name']]['engine'], 
-                                                              autocommit=auto_commit, 
+                        session = sqlalchemy.orm.sessionmaker(bind=connections[connection['name']]['engine'],
+                                                              autocommit=auto_commit,
                                                               autoflush=True)
                         connections[connection['name']]['session'] = session()
                         connections[connection['name']]['metadata'] = sqlalchemy.MetaData(bind=connections[connection['name']]['engine'])
@@ -109,7 +109,7 @@ class DataLayer:
     def select(self, connection_name, query):
         global connections
         return connections[connection_name]['engine'].execute(query)
-    
+
     def set_session(self, connection_name):
         global connections
         logging.debug('Setting active data session to "%s"' % connection_name)

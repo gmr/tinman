@@ -118,14 +118,12 @@ class RequestHandler(tornado.web.RequestHandler):
                 for loc in supported_locales:
                     # Exact match -> this is our locale
                     if loc.lower() == lang or loc.lower() == lang_cc:
-                        print 'Exact match: %s' % loc
                         locale = loc
                         break
                     # If we have a 'en_US'-style locale, try comparing only the first part
                     if '_' in loc:
                         loc_cc = loc.split('_')[0].lower()
                         if loc_cc == lang_cc:
-                            print 'CC match: %s' % loc_cc
                             locale = loc
                             break
 

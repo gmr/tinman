@@ -70,37 +70,75 @@ class RequestHandler(tornado.web.RequestHandler):
                            message=httplib.responses[status_code] );
 
     def get_user_locale(self):
+        # Note: Access it via self.locale property
 
-        # Try and get it from the arguments
-        in_session = False
-        locale = self.get_argument('locale', None)
+        # Try and get it from the arguments. This is rather hackish since it
+        # relies on get_user_locale being called at least once per page load.
+        # However, tornado always calls this function so we are safe.. for now.
+        locale = self.get_argument('setLanguage', None)
+
+        # Get the supported locale list
+        supported_locales = tornado.locale.get_supported_locales(None)
 
         # Did we not override it? Check our session
-        if not locale:
-            if self.session.values.has_key("locale"):
+        if not locale or locale not in supported_locales:
+            if self.session.values.has_key('locale'):
                 locale = self.session.locale
-                in_session = True
+                if locale in supported_locales:
+                    return tornado.locale.get(locale)
 
-        # We don't have a locale yet, get the browser's accept language
+        # We don't have a locale yet, get the browser's accept-language header
         if not locale and self.request.headers.has_key('Accept-Language'):
-            temp = self.request.headers['Accept-Language']
-            parts = temp.split(';')
-            if parts[0].find(','):
-                parts = parts[0].split(',')
-            locale = parts[0]
+            header = self.request.headers['Accept-Language']
+            langs = [v for v in header.split(',') if v]
+            qs = []
+            for lang in langs:
+                pieces = lang.split(';')
+                lang, params = pieces[0].strip().lower(), pieces[1:]
+                q = 1
+                for param in params:
+                    if '=' not in param:
+                        # Malformed request; probably a bot, we'll ignore
+                        continue
+                    lvalue, rvalue = param.split('=')
+                    lvalue = lvalue.strip().lower()
+                    rvalue = rvalue.strip()
+                    if lvalue == 'q':
+                        q = float(rvalue)
+                qs.append((lang, q))
+            qs.sort(lambda a, b: -cmp(a[1], b[1]))
 
-        # If there is a locale
-        if locale:
+            # Loop over locales to take the first one which is supported
+            for (lang, q) in qs:
+                lang_cc = lang = lang.replace('-', '_').lower()
+                if '_' in lang:
+                    lang_cc = lang.split('_')[0]
 
-            # Get the supported locale list
-            supported_locales = tornado.locale.get_supported_locales(locale)
-    
-            # If our locale is supported return it
-            if locale in supported_locales:
-                if not in_session:
-                    self.session.locale = locale
-                    self.session.save()
-                return tornado.locale.get(locale)
+                # Loop over supported locales and see if there's something matching
+                for loc in supported_locales:
+                    # Exact match -> this is our locale
+                    if loc.lower() == lang or loc.lower() == lang_cc:
+                        print 'Exact match: %s' % loc
+                        locale = loc
+                        break
+                    # If we have a 'en_US'-style locale, try comparing only the first part
+                    if '_' in loc:
+                        loc_cc = loc.split('_')[0].lower()
+                        if loc_cc == lang_cc:
+                            print 'CC match: %s' % loc_cc
+                            locale = loc
+                            break
 
-        # There is no supported locale
-        return None
+                # We found a locale; no need to try the other accepted languages
+                if locale:
+                    break
+
+
+        # If we have no valid locale yet, use the default
+        if not locale or locale not in supported_locales:
+            locale = 'en_US'
+
+        # Update session
+        self.session.locale = locale
+        self.session.save()
+        return tornado.locale.get(locale)

@@ -68,17 +68,16 @@ class DataLayer:
                     logging.debug('Beginning session "%s"' % connection)
                     connections[connection]['session'].begin()
 
-    def commit(self, connection_name=None):
+    def commit(self, all=False):
         global connections
-        if connection_name:
-            logging.debug('Committing connection "%s"' % connection_name)
-            connections[connection_name]['session'].commit()
+        if not all:
+            logging.debug('Committing active connection')
+            self.session.commit()
         else:
             for connection in connections:
                 if connections[connection]['driver'] == 'SQLAlchemy':
-                    if connections[connection]['session'].dirty:
-                        logging.debug('Committing connection "%s"' % connection)
-                        connections[connection]['session'].commit()
+                    logging.debug('Committing connection "%s"' % connection)
+                    connections[connection]['session'].commit()
 
     def create_all(self):
         global connections

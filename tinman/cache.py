@@ -59,21 +59,21 @@ class Cache:
     def delete(self, key):
         global connections
         logging.debug('Cache.delete for %s' % key)
-        return client.delete(key)
+        return client.delete(str(key))
 
     def get(self, key):
         global connections
-        data = client.get(key)
+        data = client.get(str(key))
         if data:
             logging.debug('Cache.hit for %s' % key)
         else:
             logging.debug('Cache miss for %s' % key)
-        return data 
+        return data
 
     def set(self, key, value, duration):
         global connections
         logging.debug('Cache.set %s for %i' % (key, duration))
-        return client.set(key, value, duration)
+        return client.set(str(key), value, duration)
 
     def delete_decorator_item(self, classname, function, parameters):
         global config

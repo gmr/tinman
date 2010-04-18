@@ -64,7 +64,7 @@ class Cache:
     def get(self, key):
         global connections
         data = client.get(str(key))
-        if data:
+        if data is not None:
             logging.debug('Cache.hit for %s' % key)
         else:
             logging.debug('Cache miss for %s' % key)

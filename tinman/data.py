@@ -66,7 +66,7 @@ class DataLayer:
         else:
             for connection in connections:
                 if connections[connection]['driver'] == 'SQLAlchemy':
-                    logging.debug('Committing connection "%s"' % connection)
+                    logging.debug('Beginning connection "%s"' % connection)
                     connections[connection]['session'].begin()
 
     def commit(self, all=False):
@@ -88,7 +88,7 @@ class DataLayer:
         else:
             for connection in connections:
                 if connections[connection]['driver'] == 'SQLAlchemy':
-                    logging.debug('Committing connection "%s"' % connection)
+                    logging.debug('Rolling back connection "%s"' % connection)
                     connections[connection]['session'].rollback()
 
     def create_all(self):

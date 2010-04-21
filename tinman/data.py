@@ -58,15 +58,15 @@ class DataLayer:
         logging.debug('Binding %s to %s' % (module, connection_name))
         module.metadata.bind = connections[connection_name]['engine']
 
-    def begin(self, connection_name=None):
+    def begin(self, all=False):
         global connections
-        if connection_name:
-            logging.debug('Beginning session "%s"' % connection_name)
-            connections[connection_name]['session'].begin()
+        if not all:
+            logging.debug('Beginning active connection')
+            self.session.begin()
         else:
             for connection in connections:
                 if connections[connection]['driver'] == 'SQLAlchemy':
-                    logging.debug('Beginning session "%s"' % connection)
+                    logging.debug('Committing connection "%s"' % connection)
                     connections[connection]['session'].begin()
 
     def commit(self, all=False):
@@ -79,6 +79,17 @@ class DataLayer:
                 if connections[connection]['driver'] == 'SQLAlchemy':
                     logging.debug('Committing connection "%s"' % connection)
                     connections[connection]['session'].commit()
+
+    def rollback(self, all=False):
+        global connections
+        if not all:
+            logging.debug('Rolling back active connection')
+            self.session.rollback()
+        else:
+            for connection in connections:
+                if connections[connection]['driver'] == 'SQLAlchemy':
+                    logging.debug('Committing connection "%s"' % connection)
+                    connections[connection]['session'].rollback()
 
     def create_all(self):
         global connections

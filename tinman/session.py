@@ -30,8 +30,8 @@ class Cleanup:
         import time
         logging.info('Processing %s for stale session files older than %i seconds' % (self.path, self.max_age))
         for root, dirs, files in os.walk(self.path):
-            for file in files:
-                path = '/'.join([self.path, file])
+            for f in files:
+                path = '/'.join([self.path, f])
                 stat = os.stat(path)
                 min_age = time.mktime(datetime.datetime.now().timetuple()) - self.max_age
                 if stat.st_mtime < min_age:
@@ -99,14 +99,15 @@ class Session:
             # Set the attribute in the object dict
             self.__dict__[key] = value
 
-    def __getattr__(self, key, type=None):
+    def __getattr__(self, key):
 
         if key not in self.protected:
             if self.values.has_key(key):
                 return self.values[key]
         else:
             return self.__dict__[key]
-        return None
+
+        raise AttributeError
 
     def _load(self):
 
@@ -119,7 +120,7 @@ class Session:
             try:
                 with open(session_file, 'r') as f:
                     self.values = pickle.loads(f.read())
-                f.closed
+                f.close()
             except IOError:
                 logging.info('Missing session file for session %s, creating new with same id' % self.id)
 
@@ -143,18 +144,18 @@ class Session:
         # Build the sha1 based session id
         h = hashlib.sha1()
         h.update(s)
-        id = h.hexdigest()
+        sid = h.hexdigest()
 
         # Send the cookie
         self.handler.set_secure_cookie( self.settings['cookie_name'],
-                                        id,
+                                        sid,
                                         self.settings['duration'])
 
         # Set the session start time
         self.started = datetime.datetime.now()
 
         # Return the session id
-        return id
+        return sid
 
     def clear(self):
 
@@ -185,7 +186,7 @@ class Session:
             try:
                 with open(session_file, 'w') as f:
                     f.write(pickle.dumps(self.values))
-                f.closed
+                f.close()
             except IOError:
                 logging.error('Could not write to session file: %s' % session_file)
 

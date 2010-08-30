@@ -6,7 +6,7 @@ Tinman Data Layer
 __author__  = "Gavin M. Roy"
 __email__   = "gavinmroy@gmail.com"
 __date__    = "2010-02-07"
-__version__ = 0.2
+__version__ = 0.3
 
 import logging
 
@@ -15,6 +15,7 @@ connections = {}
 
 class DataLayer:
 
+    active = None
     session = None
 
     def __init__(self, configuration):
@@ -29,74 +30,87 @@ class DataLayer:
                 if connection['driver'] == 'SQLAlchemy':
                     import sqlalchemy
                     import sqlalchemy.orm
-
-                    # Use auto-commit based upon config file
-                    auto_commit = False
-                    if connection.has_key('session'):
-                        if connection['session'].has_key('autocommit'):
-                            auto_commit = connection['session']['autocommit']
-
                     if not connections.has_key(connection['name']):
                         connections[connection['name']] = {'driver': connection['driver']}
                         logging.debug('Creating new SQLAlchemy engine instance')
                         connections[connection['name']]['engine'] = sqlalchemy.create_engine(connection['dsn'])
-                        session = sqlalchemy.orm.sessionmaker(bind=connections[connection['name']]['engine'],
-                                                              autocommit=auto_commit,
-                                                              autoflush=True)
+                        session = sqlalchemy.orm.sessionmaker(bind=connections[connection['name']]['engine'], autocommit=True, autoflush=True)
                         connections[connection['name']]['session'] = session()
                         connections[connection['name']]['metadata'] = sqlalchemy.MetaData(bind=connections[connection['name']]['engine'])
-
-                    if not self.session:
-                        logging.debug('Setting default session to "%s"' % connection['name'])
-                        self.session = connections[connection['name']]['session']
+                        if not self.session:
+                            logging.debug('Setting default session to "%s"' % connection['name'])
+                            self.session = connections[connection['name']]['session']
+                elif connection['driver'] == 'psycopg2':
+                    import psycopg2
+                    import psycopg2.extras
+                    if not connections.has_key(connection['dbname']):                    
+                        connections[connection['dbname']] = {'driver': connection['driver']}
+                        dsn = []
+                        if connection.has_key('host'):
+                          dsn.append("host='%s'" % connection['host'])
+                        if connection.has_key('port'):
+                          dsn.append("port='%i'" % connection['port'])
+                        if connection.has_key('username'):
+                          dsn.append("user='%s'" % connection['username'])
+                        if connection.has_key('password'):
+                          dsn.append("password='%s'" % connection['password'])
+                        if connection.has_key('dbname'):
+                          dsn.append("dbname='%s'" % connection['dbname'])
+                        dsn_string = ' '.join(dsn)
+                        logging.debug('Creating new psycopg2 instance connecting to "%s"' % dsn_string)
+                        try:
+                            connections[connection['dbname']]['connection'] = psycopg2.connect(dsn_string)
+                        except psycopg2.OperationalError, e:
+                            logging.error("Error connecting to the PostgreSQL database \"%s\": %s" % (connection['dbname'], e[0]))
+                            continue
+                            
+                        connections[connection['dbname']]['connection'].set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+                        connections[connection['dbname']]['cursor'] = connections[connection['dbname']]['connection'].cursor(cursor_factory=psycopg2.extras.DictCursor)
                 else:
                     logging.error('Unknown data driver type')
             else:
                 logging.error('Connection is missing the driver setting')
 
+    def set_active_connection(self, connection_name):
+        global connections
+        logging.debug('Setting active connection to "%s"' % connection_name)
+        self.active = connections[connection_name]
+
+        self.active = connections[connection_name]
+
     def bind_module(self, connection_name, module):
         logging.debug('Binding %s to %s' % (module, connection_name))
         module.metadata.bind = connections[connection_name]['engine']
 
-    def begin(self, all=False):
+    def begin(self, connection_name=None):
         global connections
-        if not all:
-            logging.debug('Beginning active connection')
-            self.session.begin()
+        if connection_name:
+            logging.debug('Beginning session "%s"' % connection_name)
+            connections[connection_name]['session'].begin()
         else:
             for connection in connections:
                 if connections[connection]['driver'] == 'SQLAlchemy':
-                    logging.debug('Beginning connection "%s"' % connection)
+                    logging.debug('Beginning session "%s"' % connection)
                     connections[connection]['session'].begin()
 
-    def commit(self, all=False):
+    def commit(self, connection_name=None):
         global connections
-        if not all:
-            logging.debug('Committing active connection')
-            self.session.commit()
+        if connection_name:
+            logging.debug('Committing connection "%s"' % connection_name)
+            connections[connection_name]['session'].commit()
         else:
             for connection in connections:
                 if connections[connection]['driver'] == 'SQLAlchemy':
-                    logging.debug('Committing connection "%s"' % connection)
-                    connections[connection]['session'].commit()
-
-    def rollback(self, all=False):
-        global connections
-        if not all:
-            logging.debug('Rolling back active connection')
-            self.session.rollback()
-        else:
-            for connection in connections:
-                if connections[connection]['driver'] == 'SQLAlchemy':
-                    logging.debug('Rolling back connection "%s"' % connection)
-                    connections[connection]['session'].rollback()
+                    if connections[connection]['session'].dirty:
+                        logging.debug('Committing connection "%s"' % connection)
+                        connections[connection]['session'].commit()
 
     def create_all(self):
         global connections
         for connection in connections:
             if connections[connection]['driver'] == 'SQLAlchemy':
                 logging.debug('Creating all for session "%s"' % connection)
-                connections[connection]['metadata'].create_all()
+                connections[connection]['session'].create_all()
 
     def dirty(self, connection_name=None):
         global connections
@@ -120,7 +134,7 @@ class DataLayer:
     def select(self, connection_name, query):
         global connections
         return connections[connection_name]['engine'].execute(query)
-
+    
     def set_session(self, connection_name):
         global connections
         logging.debug('Setting active data session to "%s"' % connection_name)

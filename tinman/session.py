@@ -30,8 +30,8 @@ class Cleanup:
         import time
         logging.info('Processing %s for stale session files older than %i seconds' % (self.path, self.max_age))
         for root, dirs, files in os.walk(self.path):
-            for f in files:
-                path = '/'.join([self.path, f])
+            for file in files:
+                path = '/'.join([self.path, file])
                 stat = os.stat(path)
                 min_age = time.mktime(datetime.datetime.now().timetuple()) - self.max_age
                 if stat.st_mtime < min_age:
@@ -43,10 +43,13 @@ class Cleanup:
 class Session:
 
     # List of attributes to not store in session dictionary
-    protected = ['id', 'handler', 'path', 'protected', 'settings', 'values']
+    protected = ['id', 'cache', 'handler', 'path', 'protected', 'settings', 'values']
 
     # Empty session dictionary
     values = {}
+    
+    # Cache handler
+    cache = None
 
     def __init__(self, handler):
 
@@ -65,6 +68,13 @@ class Session:
         if self.settings['type'] == 'file':
             self.path = self.settings['directory'].replace('__base_path__',
                                                            handler.application.settings['base_path'])
+        elif self.settings['type'] == 'memcache':
+            import tinman.cache
+            if not self.cache:
+                self.cache = tinman.cache.Cache(self.settings)
+        
+        else:
+            logging.error("Unknown session handler type: %s" % self.settings['type'])
 
         # Try and get the current session
         self.id = self.handler.get_secure_cookie(self.settings['cookie_name'])
@@ -99,15 +109,14 @@ class Session:
             # Set the attribute in the object dict
             self.__dict__[key] = value
 
-    def __getattr__(self, key):
+    def __getattr__(self, key, type=None):
 
         if key not in self.protected:
             if self.values.has_key(key):
                 return self.values[key]
         else:
             return self.__dict__[key]
-
-        raise AttributeError
+        return None
 
     def _load(self):
 
@@ -120,7 +129,7 @@ class Session:
             try:
                 with open(session_file, 'r') as f:
                     self.values = pickle.loads(f.read())
-                f.close()
+                f.closed
             except IOError:
                 logging.info('Missing session file for session %s, creating new with same id' % self.id)
 
@@ -129,6 +138,10 @@ class Session:
 
                 # Save the initial session
                 self.save()
+        elif self.settings['type'] == 'memcache':
+
+            # Get our values from memcache
+            self.values = self.cache.get(self.id)
 
     def _new(self):
         """ Create a new session ID and set the session cookie """
@@ -144,18 +157,18 @@ class Session:
         # Build the sha1 based session id
         h = hashlib.sha1()
         h.update(s)
-        sid = h.hexdigest()
+        id = h.hexdigest()
 
         # Send the cookie
         self.handler.set_secure_cookie( self.settings['cookie_name'],
-                                        sid,
+                                        id,
                                         self.settings['duration'])
 
         # Set the session start time
         self.started = datetime.datetime.now()
 
         # Return the session id
-        return sid
+        return id
 
     def clear(self):
 
@@ -171,6 +184,9 @@ class Session:
 
             # Unlink the file
             os.unlink(session_file)
+            
+        elif self.settings['type'] == 'memcache':
+            self.cache.delete(self.id)
 
         # Remove the id
         del(self.id)
@@ -186,9 +202,12 @@ class Session:
             try:
                 with open(session_file, 'w') as f:
                     f.write(pickle.dumps(self.values))
-                f.close()
+                f.closed
             except IOError:
                 logging.error('Could not write to session file: %s' % session_file)
+                
+        elif self.settings['type'] == 'memcache':
+            self.cache.set(self.id, self.values, self.settings['duration'] * 86400)
 
 if __name__ == "__main__":
 

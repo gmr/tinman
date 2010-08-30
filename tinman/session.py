@@ -14,6 +14,9 @@ import logging
 import os
 import pickle
 
+# Global Cache handle
+cache = None
+
 class Cleanup:
     """ File Based Session Cleanup Class """
 
@@ -48,11 +51,9 @@ class Session:
     # Empty session dictionary
     values = {}
     
-    # Cache handler
-    cache = None
-
     def __init__(self, handler):
-
+        global cache
+        
         logging.debug('Session object initialized')
 
         # Carry the handler object for access to settings and cookies
@@ -70,8 +71,13 @@ class Session:
                                                            handler.application.settings['base_path'])
         elif self.settings['type'] == 'memcache':
             import tinman.cache
-            if not self.cache:
-                self.cache = tinman.cache.Cache(self.settings)
+
+            # If the cache object isn't set yet
+            if not cache:
+                cache = tinman.cache.Cache(self.settings)
+        
+            # A handle for our object
+            self.cache = cache
         
         else:
             logging.error("Unknown session handler type: %s" % self.settings['type'])

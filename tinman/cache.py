@@ -11,14 +11,10 @@ __version__ = 0.1
 import logging
 import memcache
 
-client = False
-config = False
-
 # Cache Decorator
 def memoize(fn):
 
     def wrapper(*args):
-        global config, client
 
         # Get the class name for the key
         temp = str(args[0].__class__).split('.')
@@ -51,15 +47,19 @@ def memoize(fn):
 
 
 class Cache:
-    
+
     def __init__(self, settings):
+
+        logging.debug("Creating a new memcache client connection")
         self.client = memcache.Client(settings['connection'], debug=0)
 
     def delete(self, key):
+
         logging.debug('Cache.delete for %s' % key)
         return self.client.delete(key)
 
     def get(self, key):
+
         data = self.client.get(key)
         if data:
             logging.debug('Cache.hit for %s' % key)
@@ -68,8 +68,10 @@ class Cache:
         return data 
 
     def set(self, key, value, duration):
+
         logging.debug('Cache.set %s for %i' % (key, duration))
         return self.client.set(key, value, duration)
 
     def delete_decorator_item(self, classname, function, parameters):
+
         pass

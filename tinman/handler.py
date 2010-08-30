@@ -52,7 +52,7 @@ class RequestHandler(tornado.web.RequestHandler):
                 logging.info('Creating a new cache client for RequestHandler')
                 cache = tinman.cache.Cache(application.settings['Memcache'])
 
-            # Assign the global cache handle to this object
+            # Assign the global cache handle to this
             self.cache = cache
 
         # Create a new instance of the session handler
@@ -67,12 +67,12 @@ class RequestHandler(tornado.web.RequestHandler):
         except AttributeError:
             # The session isn't tied to a user so just return none
             return None
-        
+
         # We have a valid user object
         return username
 
     def get_error_html(self, status_code):
-    
+
         """
         Custom Error HTML Template
         """
@@ -106,7 +106,7 @@ class RequestHandler(tornado.web.RequestHandler):
 
             # Get the supported locale list
             supported_locales = tornado.locale.get_supported_locales(locale)
-    
+
             # If our locale is supported return it
             if locale in supported_locales:
                 if not in_session:
@@ -116,8 +116,8 @@ class RequestHandler(tornado.web.RequestHandler):
 
         # There is no supported locale
         return None
-        
+
     def __del__(self):
-      
+
         if self.cache:
             del(self.cache)

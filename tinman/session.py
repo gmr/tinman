@@ -50,10 +50,10 @@ class Session:
 
     # Empty session dictionary
     values = {}
-    
+
     def __init__(self, handler):
         global cache
-        
+
         logging.debug('Session object initialized')
 
         # Carry the handler object for access to settings and cookies
@@ -75,10 +75,10 @@ class Session:
             # If the cache object isn't set yet
             if not cache:
                 cache = tinman.cache.Cache(self.settings)
-        
+
             # A handle for our object
             self.cache = cache
-        
+
         else:
             logging.error("Unknown session handler type: %s" % self.settings['type'])
 
@@ -151,10 +151,10 @@ class Session:
 
     def _new(self):
         """ Create a new session ID and set the session cookie """
-        
+
         if not self.handler.request.headers.has_key('User-Agent'):
             self.handler.request.headers['User-Agent'] = 'Not Set'
-        
+
         # Create a string we can hash that should be fairly unique to the request
         s = ':'.join([self.handler.request.remote_ip,
                       self.handler.request.headers['User-Agent'],
@@ -190,7 +190,7 @@ class Session:
 
             # Unlink the file
             os.unlink(session_file)
-            
+
         elif self.settings['type'] == 'memcache':
             self.cache.delete(self.id)
 
@@ -211,7 +211,7 @@ class Session:
                 f.closed
             except IOError:
                 logging.error('Could not write to session file: %s' % session_file)
-                
+
         elif self.settings['type'] == 'memcache':
             self.cache.set(self.id, self.values, self.settings['duration'] * 86400)
 

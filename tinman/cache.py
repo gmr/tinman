@@ -65,7 +65,7 @@ class Cache:
             logging.debug('Cache.hit for %s' % key)
         else:
             logging.debug('Cache miss for %s' % key)
-        return data 
+        return data
 
     def set(self, key, value, duration):
 

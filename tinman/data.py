@@ -43,7 +43,7 @@ class DataLayer:
                 elif connection['driver'] == 'psycopg2':
                     import psycopg2
                     import psycopg2.extras
-                    if not connections.has_key(connection['dbname']):                    
+                    if not connections.has_key(connection['dbname']):
                         connections[connection['dbname']] = {'driver': connection['driver']}
                         dsn = []
                         if connection.has_key('host'):
@@ -63,9 +63,9 @@ class DataLayer:
                         except psycopg2.OperationalError, e:
                             logging.error("Error connecting to the PostgreSQL database \"%s\": %s" % (connection['dbname'], e[0]))
                             continue
-                            
+
                         connections[connection['dbname']]['connection'].set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-                        connections[connection['dbname']]['cursor'] = connections[connection['dbname']]['connection'].cursor(cursor_factory=psycopg2.extras.DictCursor)
+                        connections[connection['dbname']]['cursor'] = connections[connection['dbname']]['connection'].cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 else:
                     logging.error('Unknown data driver type')
             else:
@@ -134,9 +134,14 @@ class DataLayer:
     def select(self, connection_name, query):
         global connections
         return connections[connection_name]['engine'].execute(query)
-    
+
     def set_session(self, connection_name):
         global connections
         logging.debug('Setting active data session to "%s"' % connection_name)
         self.session = connections[connection_name]['session']
 
+    def result_to_list(self, result):
+        result_out = []
+        for row in result:
+            result_out.append(dict(row))
+        return result_out

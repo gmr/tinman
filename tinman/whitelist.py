@@ -7,7 +7,7 @@ __date__ = "2011-03-13"
 __version__ = 0.1
 
 from functools import wraps
-from ipaddr import IPv4
+from ipaddr import IPv4Network, IPv4Address
 from tornado.web import HTTPError
 
 
@@ -29,21 +29,13 @@ def whitelisted(method):
             raise ValueError("whitelist is not found in Application.settings")
 
         # Convert the ip into a long int version of the ip address
-        user_ip = IPv4(self.request.remote_ip).ip
+        user_ip = IPv4Address(self.request.remote_ip)
 
         # Loop through the ranges in the whitelist and check
         for whitelist_ip in self.application.settings['whitelist']:
 
             # Use IPv4 to return an ip address we can range check against
-            wl_ip = IPv4(whitelist_ip)
-
-            # if ip == the network's base IP (which is the case if we're giving
-            # it a straight IP with no range suffix) OR if ip is within the
-            # subnet for the given range (a machine's address in a subnet can't
-            # ever be the broadcast address so it's < not <=)
-            if user_ip == wl_ip.network or \
-               (user_ip >= wl_ip.network and \
-                user_ip < wl_ip.broadcast):
+            if user_ip in IPv4Network(whitelist_ip):
 
                 # Call the original function, IP is whitelisted
                 return method(self, *args, **kwargs)

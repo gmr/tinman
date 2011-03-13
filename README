@@ -1,7 +1,0 @@
-The goal of this is to provide an empty, stub project that works out of the box for Tornado.
-
-Instructions:
-
-1) Install Tornado and its prerequisites
-2) To validate it works out of the box: "./tinman.py -c sample.yaml -f"
-3) Start extending for your own purposes

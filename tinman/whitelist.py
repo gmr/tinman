@@ -31,9 +31,6 @@ def whitelisted(method):
         # Convert the ip into a long int version of the ip address
         user_ip = IPv4(self.request.remote_ip).ip
 
-        # By default the IP Address is whitelisted
-        whitelisted = False
-
         # Loop through the ranges in the whitelist and check
         for whitelist_ip in self.application.settings['whitelist']:
 

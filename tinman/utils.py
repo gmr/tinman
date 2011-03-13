@@ -296,3 +296,5 @@ def _rehash_signal_handler(signum, frame):
     Would be cool to handle this and effect changes in the config
     """
     logging.info("SIGHUP received, rehashing config")
+    if rehash_handler:
+        rehash_handler()

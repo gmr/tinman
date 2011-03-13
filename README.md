@@ -4,8 +4,8 @@ A collection of useful decorators and modules for Tornado.
 
 Requirements
 ------------
-ipaddr
-pyyaml
+- ipaddr
+- pyyaml
 
 Decorators
 ----------

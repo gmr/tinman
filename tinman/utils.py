@@ -1,11 +1,7 @@
+# -*- coding: utf-8 -*-
 """
 Functions used mainly in startup and shutdown of tornado applications
 """
-__author__ = "Gavin M. Roy"
-__email__ = "gmr@myyearbook.com"
-__date__ = "2011-03-13"
-__version__ = 0.1
-
 import grp
 import logging
 import os
@@ -25,6 +21,47 @@ children = []
 # Rehash Handler callback handler
 rehash_handler = None
 
+# Application state for shutdown
+running = False
+
+
+def log_method_call(method):
+    """
+    Logging decorator to send the method and arguments to logging.debug
+    """
+    @wraps(method)
+    def debug_log(*args, **kwargs):
+
+        if logging.getLogger('').getEffectiveLevel() == logging.DEBUG:
+
+            # Get the class name of what was passed to us
+            try:
+                class_name = args[0].__class__.__name__
+            except AttributeError:
+                class_name = 'Unknown'
+            except IndexError:
+                class_name = 'Unknown'
+
+            # Build a list of arguments to send to the logging
+            log_args = list()
+            for x in xrange(1, len(args)):
+                log_args.append(args[x])
+            if len(kwargs) > 1:
+                log_args.append(kwargs)
+
+            # If we have arguments, log them as well, otherwise just the method
+            if log_args:
+                logging.debug("%s.%s(%r) Called", class_name, method.__name__,
+                             log_args)
+            else:
+                logging.debug("%s.%s() Called", class_name, method.__name__)
+
+        # Actually execute the method
+        return method(*args, **kwargs)
+
+    # Return the debug_log function to the python stack for execution
+    return debug_log
+
 
 def application_name():
     """
@@ -40,6 +77,7 @@ def hostname():
     return gethostname().split(".")[0]
 
 
+@log_method_call
 def daemonize(pidfile=None, user=None, group=None):
     """
     Fork the Python app into the background and close the appropriate
@@ -123,7 +161,6 @@ def load_configuration_file(config_file):
     Load our YAML configuration file from disk or error out
     if not found or parsable
     """
-
     try:
         with file(config_file, 'r') as f:
             config = yaml.load(f)
@@ -138,44 +175,6 @@ def load_configuration_file(config_file):
         sys.exit(1)
 
     return config
-
-
-def log_method_call(method):
-    """
-    Logging decorator to send the method and arguments to logger.debug
-    """
-    @wraps(method)
-    def debug_log(*args, **kwargs):
-
-        if logger.getEffectiveLevel() == logging.DEBUG:
-
-            # Get the class name of what was passed to us
-            try:
-                class_name = args[0].__class__.__name__
-            except AttributeError:
-                class_name = 'Unknown'
-            except IndexError:
-                class_name = 'Unknown'
-
-            # Build a list of arguments to send to the logger
-            log_args = list()
-            for x in xrange(1, len(args)):
-                log_args.append(args[x])
-            if len(kwargs) > 1:
-                log_args.append(kwargs)
-
-            # If we have arguments, log them as well, otherwise just the method
-            if log_args:
-                logger.debug("%s.%s(%r) Called", class_name, method.__name__,
-                             log_args)
-            else:
-                logger.debug("%s.%s() Called", class_name, method.__name__)
-
-        # Actually execute the method
-        return method(*args, **kwargs)
-
-    # Return the debug_log function to the python stack for execution
-    return debug_log
 
 
 def setup_logging(config, debug=False):
@@ -224,11 +223,11 @@ def setup_logging(config, debug=False):
     logging.info('Log level set to %s' % logging_level)
 
     # Get the default logger
-    default_logger = logging.getLogger('')
+    default_logging = logging.getLogger()
 
     # Remove the default stream handler
     stream_handler = None
-    for handler in default_logger.handlers:
+    for handler in default_logging.handlers:
         if isinstance(handler, logging.StreamHandler):
             stream_handler = handler
             break
@@ -255,26 +254,31 @@ def setup_logging(config, debug=False):
                 syslog = handlers.SysLogHandler(address=address,
                                                 facility=facility)
                 # Add the handler
-                default_logger.addHandler(syslog)
+                default_logging.addHandler(syslog)
 
                 # Remove the StreamHandler
                 if stream_handler:
-                    default_logger.removeHandler(stream_handler)
+                    default_logging.removeHandler(stream_handler)
             else:
                 logging.error('%s:Invalid facility, syslog logging aborted',
                               application_name())
-
 
 @log_method_call
 def shutdown():
     """
     Cleanly shutdown the application
     """
+    global running
+
     # Tell all our children to stop
     for child in children:
-        child.stop()
+        child.shutdown()
+
+    # Set the running state
+    running = False
 
 
+@log_method_call
 def setup_signals():
     """
     Setup the signals we want to be notified on
@@ -283,6 +287,7 @@ def setup_signals():
     signal.signal(signal.SIGHUP, _rehash_signal_handler)
 
 
+@log_method_call
 def _shutdown_signal_handler(signum, frame):
     """
     Called on SIGTERM to shutdown the application
@@ -291,6 +296,7 @@ def _shutdown_signal_handler(signum, frame):
     shutdown()
 
 
+@log_method_call
 def _rehash_signal_handler(signum, frame):
     """
     Would be cool to handle this and effect changes in the config

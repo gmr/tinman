@@ -1,7 +1,7 @@
 Tinman
 ======
 
-Tinman is an take what you need package designed to speed development of
+Tinman is a take what you need package designed to speed development of
 Tornado applications.  It includes an application wrapper and a toolbox of
 decorators and utilities.
 
@@ -11,8 +11,7 @@ Features
 - RequestHandler output caching
 - Network address whitelisting decorator
 - Method/Function debug logging decorator
-- A full featured application wrapper that provides a convenient way to develop
-  and run Tornado applications.
+- A full featured application wrapper
 
 Requirements
 ------------
@@ -24,7 +23,7 @@ Application Runner
 ------------------
 
 The tinman application runner works off a YAML configuration file format and
-provides a convient interface for running tornado applications interactively
+provides a convenient interface for running tornado applications interactively
 or as a daemon.
 
     Command Line Syntax:
@@ -47,6 +46,7 @@ or as a daemon.
         Application:
             debug: True
             xsrf_cookies: False
+            # Any other vaidate Tornado application setting item
 
         HTTPServer:
             no_keep_alive: False

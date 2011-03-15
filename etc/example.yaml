@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+Application:
+    debug: True
+    xsrf_cookies: False
+
+HTTPServer:
+    no_keep_alive: False
+    ports: [8000]
+    xheaders: True
+
+Logging:
+    filename: log.txt
+    format: "%(module)-10s# %(lineno)-5d %(levelname) -10s %(asctime)s  %(message)s"
+    level: debug
+
+Routes:
+    - [/, test.example.Home]
+    - [/(.*), test.example.Catchall]

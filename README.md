@@ -63,6 +63,11 @@ or as a daemon.
                 address: /dev/log
                 facility: LOG_LOCAL6
 
+        Routes:
+            -[/, application.RequestHandler]
+            -[/login, application.LoginRequestHandler]
+            -[/data/(.*), application.DataRequestHandler]
+
 Decorators
 ----------
 

@@ -317,3 +317,23 @@ def _rehash_signal_handler(signum, frame):
     logging.info("SIGHUP received, rehashing config")
     if rehash_handler:
         rehash_handler()
+
+
+def import_namespaced_class(path):
+    """
+    Pass in a string in the format of foo.Bar, foo.bar.Baz, foo.bar.baz.Qux
+    and it will return a handle to the class
+    """
+    # Split up our string containing the import and class
+    parts = path.split('.')
+
+    # Build our strings for the import name and the class name
+    import_name = '.'.join(parts[0:-1])
+    class_name = parts[-1]
+
+    # get the handle to the class for the given import
+    class_handle = getattr(__import__(import_name, fromlist=class_name),
+                           class_name)
+
+    # Return the class handle
+    return class_handle

@@ -15,11 +15,9 @@ from functools import wraps
 from socket import gethostname
 from tornado.options import enable_pretty_logging
 
-# Global list of children to shutdown on shutdown
-children = []
-
-# Rehash Handler callback handler
+# Callback handlers
 rehash_handler = None
+shutdown_handler = None
 
 # Application state for shutdown
 running = False
@@ -95,6 +93,17 @@ def daemonize(pidfile=None, user=None, group=None):
     # Flush stdout and stderr
     sys.stdout.flush()
     sys.stderr.flush()
+    
+    # Set our default uid, gid
+    uid, gid = -1, -1
+
+    # Get the user id if we have a user set
+    if user:
+        uid = pwd.getpwnam(user).pw_uid
+        
+    # Get the group id if we have a group set
+    if group:
+        gid = grp.getgrnam(group).gr_gid
 
     # Fork off from the process that called us
     pid = os.fork()
@@ -117,10 +126,10 @@ def daemonize(pidfile=None, user=None, group=None):
         with open(pidfile, 'w') as f:
             f.write('%i\n' % pid)
 
-        # Append the pidfile to our global pidfile list
-        global pidfiles
-        pidfiles.append(pidfile)
-
+            # If we have uid or gid change the uid/gid for the file
+            if uid > -1 or gid > -1:
+                os.fchown(f.fileno(), uid, gid)        
+            
         # Exit the parent process
         sys.exit(0)
 
@@ -138,21 +147,29 @@ def daemonize(pidfile=None, user=None, group=None):
     os.dup2(se.fileno(), sys.stderr.fileno())
 
     # Set the running user
-    logging.debug("Changing the running user to %s:%s" % (user, group))
-
-    if user:
-        uid = pwd.getpwnam(user).pw_uid
-        # Make sure we're not trying to switch to the same user
-        if uid != os.geteuid():
-            os.setuid(uid)
-
-    # Set the running group
-    if group:
-        gid = grp.getgrnam(group).gr_gid
-        # Make sure we're not already in the right group
-        if gid != os.getegid():
+    if user and group:
+        logging.info("Changing the running user:group to %s:%s", user, group)
+    elif user:
+        logging.info("Changing the running user to %s", user)
+    elif group:
+        logging.info("Changing the group to %s", group)    
+    
+    # If we have a uid and it's not for the running user
+    if uid > -1 and uid != os.geteuid():
+            try:
+                os.seteuid(uid)
+                logging.debug("User changed to %s(%i)", user, uid)
+            except OSError as e:
+                logging.error("Could not set the user: %s", str(e))
+                
+    # if we have a gid and it's not for the current group
+    if gid > -1 and gid != os.getegid():
+        try:
             os.setgid(gid)
-
+            logging.debug("Process group changed to %s(%i)", group, gid)
+        except OSError as e:
+            logging.error("Could not set the group: %s", str(e))
+            
     return True
 
 
@@ -271,8 +288,8 @@ def shutdown():
     global running
 
     # Tell all our children to stop
-    for child in children:
-        child.shutdown()
+    if shutdown_handler:
+        shutdown_handler()
 
     # Set the running state
     running = False

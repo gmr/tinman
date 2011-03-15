@@ -1,0 +1,2 @@
+tinman_CONF="/opt/tinman/etc/production.yaml"
+tinman_USER="tinman"

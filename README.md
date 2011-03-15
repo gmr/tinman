@@ -1,11 +1,62 @@
 Tinman
 ======
-A collection of useful decorators and modules for Tornado.
+
+Tinman is an take what you need package designed to speed development of
+Tornado applications.  It includes an application wrapper and a toolbox of
+decorators and utilities.
+
+Features
+--------
+
+- RequestHandler output caching
+- Network address whitelisting decorator
+- Method/Function debug logging decorator
+- A full featured application wrapper that provides a convenient way to develop
+  and run Tornado applications.
 
 Requirements
 ------------
+
 - ipaddr
 - pyyaml
+
+Application Runner
+------------------
+
+The tinman application runner works off a YAML configuration file format and
+provides a convient interface for running tornado applications interactively
+or as a daemon.
+
+    Command Line Syntax:
+
+        tinman -c configuration.yaml [-f]
+
+    Command Line Options"
+
+
+
+    Configuration File Syntax:
+
+        %YAML 1.2
+        ---
+        Application:
+            debug: True
+            xsrf_cookies: False
+
+        HTTPServer:
+            no_keep_alive: False
+            ports: [8000,8001]
+            xheaders: True
+
+        Logging:
+            #filename: log.txt
+            format: "%(module)-10s# %(lineno)-5d %(levelname) -10s %(asctime)s  %(message)s"
+            # Valid values: debug, info, warning, error, critical
+            level: debug
+            handler: syslog
+            syslog:
+                address: /dev/log
+                facility: LOG_LOCAL6
 
 Decorators
 ----------
@@ -98,4 +149,3 @@ Modules
     Registers the shutdown function on SIGTERM and registers a rehash handler
     on SIGHUP. To specify the rehash handler, assign a callback to
     tinman.utils.rehash_handler.
-

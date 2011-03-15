@@ -75,7 +75,6 @@ def hostname():
     return gethostname().split(".")[0]
 
 
-@log_method_call
 def daemonize(pidfile=None, user=None, group=None):
     """
     Fork the Python app into the background and close the appropriate
@@ -93,14 +92,14 @@ def daemonize(pidfile=None, user=None, group=None):
     # Flush stdout and stderr
     sys.stdout.flush()
     sys.stderr.flush()
-    
+
     # Set our default uid, gid
     uid, gid = -1, -1
 
     # Get the user id if we have a user set
     if user:
         uid = pwd.getpwnam(user).pw_uid
-        
+
     # Get the group id if we have a group set
     if group:
         gid = grp.getgrnam(group).gr_gid
@@ -128,8 +127,8 @@ def daemonize(pidfile=None, user=None, group=None):
 
             # If we have uid or gid change the uid/gid for the file
             if uid > -1 or gid > -1:
-                os.fchown(f.fileno(), uid, gid)        
-            
+                os.fchown(f.fileno(), uid, gid)
+
         # Exit the parent process
         sys.exit(0)
 
@@ -152,8 +151,8 @@ def daemonize(pidfile=None, user=None, group=None):
     elif user:
         logging.info("Changing the running user to %s", user)
     elif group:
-        logging.info("Changing the group to %s", group)    
-    
+        logging.info("Changing the group to %s", group)
+
     # If we have a uid and it's not for the running user
     if uid > -1 and uid != os.geteuid():
             try:
@@ -161,7 +160,7 @@ def daemonize(pidfile=None, user=None, group=None):
                 logging.debug("User changed to %s(%i)", user, uid)
             except OSError as e:
                 logging.error("Could not set the user: %s", str(e))
-                
+
     # if we have a gid and it's not for the current group
     if gid > -1 and gid != os.getegid():
         try:
@@ -169,7 +168,7 @@ def daemonize(pidfile=None, user=None, group=None):
             logging.debug("Process group changed to %s(%i)", group, gid)
         except OSError as e:
             logging.error("Could not set the group: %s", str(e))
-            
+
     return True
 
 
@@ -280,7 +279,7 @@ def setup_logging(config, debug=False):
                 logging.error('%s:Invalid facility, syslog logging aborted',
                               application_name())
 
-@log_method_call
+
 def shutdown():
     """
     Cleanly shutdown the application
@@ -295,7 +294,6 @@ def shutdown():
     running = False
 
 
-@log_method_call
 def setup_signals():
     """
     Setup the signals we want to be notified on
@@ -304,7 +302,6 @@ def setup_signals():
     signal.signal(signal.SIGHUP, _rehash_signal_handler)
 
 
-@log_method_call
 def _shutdown_signal_handler(signum, frame):
     """
     Called on SIGTERM to shutdown the application
@@ -313,7 +310,6 @@ def _shutdown_signal_handler(signum, frame):
     shutdown()
 
 
-@log_method_call
 def _rehash_signal_handler(signum, frame):
     """
     Would be cool to handle this and effect changes in the config

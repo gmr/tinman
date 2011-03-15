@@ -63,7 +63,7 @@ def main(*args):
     # Setup optparse
     usage = "usage: %prog -c <configfile> [options]"
     version_string = "%%prog %s" % __version__
-    description = "tinman is a Tornado application runner"
+    description = "Tornado application runner"
 
     # Create our parser and setup our command line options
     parser = OptionParser(usage=usage,

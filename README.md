@@ -29,11 +29,16 @@ or as a daemon.
 
     Command Line Syntax:
 
-        tinman -c configuration.yaml [-f]
+        Usage: tinman -c <configfile> [options]
 
-    Command Line Options"
+        Tornado application wrapper
 
-
+        Options:
+          --version             show program's version number and exit
+          -h, --help            show this help message and exit
+          -c CONFIG, --config=CONFIG
+                                Specify the configuration file for use
+          -f, --foreground      Run interactively in console
 
     Configuration File Syntax:
 

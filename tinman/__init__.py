@@ -120,7 +120,6 @@ def start(routes, settings, http_config, port):
 
 
 def main(*args):
-
     # Setup optparse
     usage = "usage: %prog -c <configfile> [options]"
     version_string = "%%prog %s" % __version__
@@ -174,8 +173,12 @@ def main(*args):
         raise AttributeError("Missing Routes section in configuration")
 
     if not options.route_decorator and \
-       not isinstance(config['Routes'], 'list'):
+       not isinstance(config['Routes'], list):
         raise AttributeError("Error in Routes section in configuration")
+
+    if 'base_path' in config:
+        import sys
+        sys.path.insert(0, config['base_path'])
 
     # Setup our logging
     utils.setup_logging(config['Logging'], options.foreground)

@@ -2,17 +2,22 @@
 """
 Functions used mainly in startup and shutdown of tornado applications
 """
+import logging
+import os
+import os.path
+import signal
+import sys
+import yaml
+
+# Windows doesn't support these
 try:
     import grp
 except ImportError:
     grp = None
-import logging
-import os
-import os.path
-import pwd
-import signal
-import sys
-import yaml
+try:
+    import pwd
+except ImportError:
+    pwd = None
 
 from functools import wraps
 from socket import gethostname
@@ -100,11 +105,11 @@ def daemonize(pidfile=None, user=None, group=None):
     uid, gid = -1, -1
 
     # Get the user id if we have a user set
-    if user:
+    if pwd and user:
         uid = pwd.getpwnam(user).pw_uid
 
     # Get the group id if we have a group set
-    if group and grp:
+    if grp and group:
         gid = grp.getgrnam(group).gr_gid
 
     # Fork off from the process that called us

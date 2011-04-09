@@ -2,7 +2,10 @@
 """
 Functions used mainly in startup and shutdown of tornado applications
 """
-import grp
+try:
+    import grp
+except ImportError:
+    grp = None
 import logging
 import os
 import os.path
@@ -101,7 +104,7 @@ def daemonize(pidfile=None, user=None, group=None):
         uid = pwd.getpwnam(user).pw_uid
 
     # Get the group id if we have a group set
-    if group:
+    if group and grp:
         gid = grp.getgrnam(group).gr_gid
 
     # Fork off from the process that called us

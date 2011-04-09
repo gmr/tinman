@@ -1,6 +1,6 @@
 from setuptools import setup
 
-version = "0.1.0"
+version = "0.1.1"
 
 long_description = """\
 Tinman is an take what you need package designed to speed development of
@@ -21,7 +21,6 @@ Tornado development",
       author='Gavin M. Roy',
       author_email='gmr@myyearbook.com',
       url='http://github.com/gmr/tinman',
-      copyright='2011 Insider Guides, Inc.',
       license='BSD',
       packages=['tinman'],
       requires=['ipaddr', 'pyyaml'],

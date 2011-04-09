@@ -307,8 +307,10 @@ def setup_signals():
     Setup the signals we want to be notified on
     """
     signal.signal(signal.SIGTERM, _shutdown_signal_handler)
-    signal.signal(signal.SIGHUP, _rehash_signal_handler)
-
+    try:
+        signal.signal(signal.SIGHUP, _rehash_signal_handler)
+    except AttributeError:
+        pass
 
 def _shutdown_signal_handler(signum, frame):
     """

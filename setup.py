@@ -1,6 +1,6 @@
 from setuptools import setup
 
-version = "0.1.2"
+version = "0.1.3"
 
 long_description = """\
 Tinman is an take what you need package designed to speed development of

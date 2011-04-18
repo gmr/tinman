@@ -5,7 +5,7 @@ sys.path.insert(0, '..')
 
 import tinman.whitelist as whitelist
 
-# Money patch in our HTTPError to be an AssertionError
+# Monkey patch in our HTTPError to be an AssertionError
 whitelist.HTTPError = AssertionError
 
 

@@ -74,7 +74,7 @@ class TinmanApplication(Application):
                                                     settings['base_path'])
 
         # If we specified the UI modules module we need to import it
-        if 'ui_modiles' in settings:
+        if 'ui_modules' in settings:
             try:
                 # Assign the modules to the import
                 settings['ui_modules'] = \

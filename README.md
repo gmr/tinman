@@ -44,6 +44,7 @@ or as a daemon.
         %YAML 1.2
         ---
         Application:
+            base_path: /home/foo/mywebsite
             debug: True
             xsrf_cookies: False
             # Any other vaidate Tornado application setting item
@@ -64,9 +65,9 @@ or as a daemon.
                 facility: LOG_LOCAL6
 
         Routes:
-            -[/, application.RequestHandler]
-            -[/login, application.LoginRequestHandler]
-            -[/data/(.*), application.DataRequestHandler]
+            - [/, application.RequestHandler]
+            - [/login, application.LoginRequestHandler]
+            - [/data/(.*), application.DataRequestHandler]
 
 Decorators
 ----------

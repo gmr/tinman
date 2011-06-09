@@ -1,14 +1,12 @@
 from setuptools import setup
 
-version = "0.1.3"
-
 long_description = """\
 Tinman is an take what you need package designed to speed development of
 Tornado applications.  It includes an application wrapper and a toolbox of
 decorators and utilities.
 """
 setup(name='tinman',
-      version=version,
+      version='0.2.1',
       description="Tornado application wrapper and toolbox for \
 Tornado development",
       long_description=long_description,

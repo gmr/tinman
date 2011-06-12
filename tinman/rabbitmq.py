@@ -1,9 +1,12 @@
 """
 Add RabbitMQ Support by adding a pika client that may be bound to the IO loop
 instance
+
 """
-__author__ = 'gmr'
-__since__ = '6/8/11'
+__author__ = 'Gavin M. Roy'
+__email__ = 'gmr@myyearbook.com'
+__since__ = '2011-06-06'
+
 
 from . import __version__
 import json
@@ -16,12 +19,30 @@ import time
 
 
 class RabbitMQ(object):
+    """RabbitMQ object to facility easy integration with Pika. Currently
+    only supports message publishing.
+
+    """
 
     DEFAULT_APP_ID = 'tinman'
     DEFAULT_DELIVERY_MODE = 1
     DEFAULT_ENCODING = 'UTF-8'
 
     def __init__(self, host, port, virtual_host, user, password):
+        """Construct our RabbitMQ object for use on the Tornado IOLoop
+
+        :param host: RabbitMQ server host
+        :type host: str
+        :param port: RabbitMQ server port
+        :type port: int
+        :param virtual_host: RabbitMQ virtual host to use
+        :type virtual_host: str
+        :param user: RabbitMQ user to connect as
+        :type user: str
+        :param password: RabbitMQ user's password
+        :type paassword: str
+
+        """
 
         # Create a logger instance
         self._logger = logging.getLogger('tinman.rabbitmq')
@@ -55,7 +76,12 @@ class RabbitMQ(object):
         tornado_connection.TornadoConnection(self.params, self._on_connected)
 
     def _on_connected(self, connection):
+        """Called when a connection has opened.
 
+        :param connection: RabbitMQ connection for raw communication
+        :type connection: pika.connection.Connection
+
+        """
         # Assign our connection to the object
         self._connection = connection
 
@@ -67,6 +93,11 @@ class RabbitMQ(object):
                           self.params.host, self.params.port)
 
     def _on_channel_opened(self, channel):
+        """Called when a channel is opened.
+
+        :param channel: RabbitMQ channel for commands and receiving messages
+        :type channel: pika.channel.Channel
+        """
 
         # Create a channel to use
         self._channel = channel
@@ -79,12 +110,25 @@ class RabbitMQ(object):
                         mimetype='text/plain',
                         mandatory=False,
                         immediate=False):
+        """Publish a message to RabbitMQ. Auto-JSON encodes all non-string data
+        types.
+
+        :param exchange: RabbitMQ exchange to publish to.
+        :type exchange: str
+        :param routing_key: RabbitMQ publishing routing key
+        :type routing_key: str
+        :param mimetime: mimetype of the message
+        :type mimetype: str
+        :param mandatory: AMQP Basic.Publish mandatory flag
+        :type mandatory: bool
+        :param immediate: AMQP Basic.Publish immediate flag
+        :type immediate: bool
+        """
 
         # Auto-JSON encode if it's not a string
         if not isinstance(message, basestring):
             message = json.dumps(message)
             mimetype = 'application/json'
-
 
         # Create the properties for the message
         props = spec.BasicProperties(content_type=mimetype,

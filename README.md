@@ -12,12 +12,19 @@ Features
 - Network address whitelisting decorator
 - Method/Function debug logging decorator
 - A full featured application wrapper
+- Automated connection setup for RabbitMQ
+  (memcached, redis, mongodb, mysql, postgresql planned)
 
 Requirements
 ------------
 
 - ipaddr
 - pyyaml
+
+Optional Dependencies
+---------------------
+
+- pika >= v0.9.5
 
 Application Runner
 ------------------
@@ -64,10 +71,48 @@ or as a daemon.
                 address: /dev/log
                 facility: LOG_LOCAL6
 
+        # Automatically connect to RabbitMQ
+        RabbitMQ:
+            host: localhost
+            port: 5672
+            username: guest
+            password: guest
+            virtual_host: /
+
         Routes:
-            - [/, application.RequestHandler]
-            - [/login, application.LoginRequestHandler]
-            - [/data/(.*), application.DataRequestHandler]
+             -
+                - /
+                - test.example.Home
+             -
+                # /c1f1-7c5d9e0f.gif
+                - re
+                - /(c[a-f0-9]f[a-f0-9]{1,3}-[a-f0-9]{8}).gif
+                - test.example.Pixel
+             -
+                - .*
+                - tornado.web.RedirectHandler
+                - {"url": "http://www.github.com/gmr/tinman"}
+
+Test Application
+----------------
+
+The tinman application runner has a built in test application. To see if the
+module is setup correctly simply run:
+
+    tinman -f
+
+In your console you should see output similar to:
+
+    Configuration not specified, running Tinman Test Application
+    utils       # 247   INFO      2011-06-11 23:25:26,164  Log level set to 10
+    cli         # 145   INFO      2011-06-11 23:25:26,164  Starting Tinman v0.2.1 process for port 8000
+    cli         # 154   DEBUG     2011-06-11 23:25:26,169  All children spawned
+    application # 106   DEBUG     2011-06-11 23:25:26,170  Initializing route: / with tinman.test.DefaultHandler
+    application # 36    INFO      2011-06-11 23:25:26,171  Appending handler: ('/', <class 'tinman.test.DefaultHandler'>)
+    cli         # 171   INFO      2011-06-11 23:25:26,174  Starting Tornado v1.2.1 HTTPServer on port 8000
+    web         # 1235  INFO      2011-06-11 23:25:32,782  200 GET / (127.0.0.1) 1.24ms
+
+You should now be able to access a test webpage on port 8000. CTRL-C will exit.
 
 Decorators
 ----------
@@ -91,6 +136,14 @@ Decorators
           @tinman.whitelisted
           def get(self):
               self.write("IP was whitelisted")
+
+  In addition you may add the whitelist right into the configuration file:
+
+        Application:
+            whitelist:
+              - 10.0.0.0/8
+              - 192.168.1.0/24
+              - 1.2.3.4/32
 
 - tinman.memoize: A local in-memory cache decorator. RequestHandler class
   method calls are cached by name and arguments. Note that this monkey-patches
@@ -160,3 +213,60 @@ Modules
     Registers the shutdown function on SIGTERM and registers a rehash handler
     on SIGHUP. To specify the rehash handler, assign a callback to
     tinman.utils.rehash_handler.
+
+Auto-Setup of Services
+----------------------
+
+In order to facilitate a quick development process, the tinman application now
+has the concept of auto-setup and connect services. Initially, RabbitMQ is the
+only connectivity that is supported (via the Pika library). It is intended to
+add support for all major service types that have asynchronous support for the
+Tornado IO loop.
+
+__RabbitMQ__
+
+To setup an automatic connection to RabbitMQ simply include a RabbitMQ section
+in your configuration file:
+
+    RabbitMQ:
+        host: localhost
+        port: 5672
+        username: guest
+        password: guest
+        virtual_host: /
+
+When the application is constructed, it will connect to RabbitMQ and assign
+the connection and channel to a standard object called tinman which is an
+attribute of the application.
+
+We construct a copy of a tinman specific object using the tinman.rabbitmq.RabbitMQ
+class. Currently this is only setup to publish messages, though it is the intent
+to add the ability to consume messages asychronously as well. This object is
+accessed from a request handler as: self.application.tinman.rabbitmq
+
+For publishing messages, only one command is required: RabbitMQ.publish_message
+
+If you pass in a dictionary or list, the message will be auto-JSON encoded
+and the mimetype will be set as application/json.
+
+_Method signature_
+
+__Parameters__
+
+ - exchange: RabbitMQ exchange to publish to
+ - routing_key: RabbitMQ routing key to use in publishing message
+ - message: The message itself to send
+ - mimetype: The mimetype of the message (default: text/plain)
+ - mandatory: AMQP Basic.Publish mandatory field
+ - immediate: AMQP Basic.Publish immediate field
+
+__Returns__
+
+    None
+
+_Example_
+
+    self.application.tinman.rabbitmq.publish_message(self._exchange,
+                                                     routing_key,
+                                                     event)
+

@@ -2,9 +2,10 @@
 """
 Core Tinman imports
 """
-__author__ = 'Gavin M. Roy <gmr@myyearbook.com>'
+__author__ = 'Gavin M. Roy'
+__email__ = '<gmr@myyearbook.com>'
 __since__ = '2011-03-14'
-__version__ = 0,2,1
+__version__ = 0,2,2
 
 __all__ = ['tinman.application',
            'tinman.cache',

@@ -5,6 +5,7 @@ __author__ = 'gmr'
 __since__ = '6/6/11'
 
 import logging
+import tinman
 from tornado import web
 
 CONFIG = {'Application': {'debug': True,
@@ -13,7 +14,7 @@ CONFIG = {'Application': {'debug': True,
                         'ports': [8000],
                         'xheaders': False},
          'Logging': {'filename': 'log.txt',
-                     'format': "%(module)-10s# %(lineno)-5d %(levelname) -10s\
+                     'format': "%(module)-12s# %(lineno)-5d %(levelname) -10s\
 %(asctime)s  %(message)s",
                      'level': logging.DEBUG},
          'Routes': [("/", "tinman.test.DefaultHandler")]}
@@ -22,4 +23,13 @@ CONFIG = {'Application': {'debug': True,
 class DefaultHandler(web.RequestHandler):
 
     def get(self):
-        self.write({"msg": "Hello World"})
+
+        # Send a JSON string for our test
+        self.write({"message": "Hello World",
+                    "request": {"method": self.request.method,
+                                "protocol": self.request.protocol,
+                                "path": self.request.path,
+                                "query": self.request.query,
+                                "remote_ip": self.request.remote_ip,
+                                "version": self.request.version},
+                    "tinman": {"version":  "%i.%i.%i" % tinman.__version__}})

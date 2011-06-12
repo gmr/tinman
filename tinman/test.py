@@ -1,8 +1,10 @@
 """
-Module document
+Tinman Test Application
+
 """
-__author__ = 'gmr'
-__since__ = '6/6/11'
+__author__ = 'Gavin M. Roy'
+__email__ = 'gmr@myyearbook.com'
+__since__ = '2011-06-06'
 
 import logging
 import tinman

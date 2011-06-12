@@ -22,6 +22,7 @@ import time
 # Tornado imports
 from tornado import httpserver
 from tornado import ioloop
+from tornado import version as tornado_version
 
 class TinmanConnections(object):
 
@@ -140,7 +141,8 @@ class TinmanProcess(object):
         # Loop through and kick off our processes
         self._children = []
         for port in config['HTTPServer']['ports']:
-            self._logger.info("Starting Tinman process for port %i" % port)
+            self._logger.info("Starting Tinman v%s process for port %i",
+                              '%i.%i.%i' % __version__, port)
             # Kick off the child process
             child = multiprocessing.Process(target=self._start_server,
                                             name="tinman-%i" % port,
@@ -165,7 +167,8 @@ class TinmanProcess(object):
         self._build_connections(config)
 
         # Start the HTTP Server
-        self._logger.info("Starting Tornado HTTPServer on port %i" % port)
+        self._logger.info("Starting Tornado v%s HTTPServer on port %i",
+                          tornado_version, port)
         http_server = httpserver.HTTPServer(self._application)
         http_server.listen(port)
 
@@ -183,7 +186,8 @@ class TinmanProcess(object):
 
         # No configuration file?
         if options.config is None:
-            sys.stdout.write('Configuration not passed, running Tinman Test')
+            sys.stdout.write("\nConfiguration not specified, \
+running Tinman Test Application\n")
             from . import test
             config = test.CONFIG
 

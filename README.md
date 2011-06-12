@@ -141,6 +141,7 @@ In addition you may add the whitelist right into the configuration file:
           - 1.2.3.4/32
 
 __tinman.memoize__
+
 A local in-memory cache decorator. RequestHandler class method calls are cached
 by name and arguments. Note that this monkey-patches the RequestHandler class
 on execution and will cache the total output created including all of the

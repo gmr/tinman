@@ -3,6 +3,10 @@
 Application:
     debug: True
     xsrf_cookies: False
+    whitelist:
+      - 10.0.0.0/8
+      - 192.168.1.0/24
+      - 1.2.3.4/32
 
 HTTPServer:
     no_keep_alive: False
@@ -11,9 +15,36 @@ HTTPServer:
 
 Logging:
     filename: log.txt
-    format: "%(module)-10s# %(lineno)-5d %(levelname) -10s %(asctime)s  %(message)s"
+    format: "%(module)-12s# %(lineno)-5d %(levelname) -10s %(asctime)s  %(message)s"
     level: debug
 
+# As of 0.2.1 having this automatically creates a RabbitMQ connection for your tinman app
+# It is exposed as application.tinman.rabbitmq
+RabbitMQ:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual_host: /
+
+# Route / Request Handler mapping
+# New format includes better support for complex regex where previous would break YAML's sequence format
 Routes:
-    - [/, test.example.Home]
-    - [/(.*), test.example.Catchall]
+
+  # Homepage
+  -
+    - /
+    - test.example.Home
+
+ # Auto-generated pixel using the regex supported syntax, put re before the URI regex in the list
+ -
+    # /c1f1-7c5d9e0f.gif
+    - re
+    - /(c[a-f0-9]f[a-f0-9]{1,3}-[a-f0-9]{8}).gif
+    - test.example.Pixel
+
+ # Any URL not matched up to this point
+ -
+    - .*
+    - tornado.web.RedirectHandler
+    - {"url": "http://www.github.com"}

@@ -88,20 +88,20 @@ class TinmanApplication(web.Application):
                                attributes)
             return False
 
-        # By default we do not have extra parameters
-        parameters = None
+        # By default we do not have extra kwargs
+        kwargs = None
 
         # If we have a regex based route, set it up with a raw string
         if attributes[0] == 're':
             route =r"%s" % attributes[1]
             module = attributes[2]
-            if len(attributes) > 3:
-                parameters = attributes[3:]
+            if len(attributes) == 4:
+                kwargs = attributes[3]
         else:
             route  = r"%s" % attributes[0]
             module = attributes[1]
-            if len(attributes) > 2:
-                parameters = attributes[2:]
+            if len(attributes) == 3:
+                kwargs = attributes[2]
 
         logging.debug("Initializing route: %s with %s", route, module)
 
@@ -117,8 +117,9 @@ class TinmanApplication(web.Application):
         # Our base prepared route
         prepared_route = [route, handler]
 
-        if parameters:
-            prepared_route.append(parameters)
+        # If the route has an optional kwargs dict
+        if kwargs:
+            prepared_route.append(kwargs)
 
         # Return the route
         return tuple(prepared_route)

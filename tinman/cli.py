@@ -176,7 +176,10 @@ class TinmanProcess(object):
         self._ioloop = ioloop.IOLoop.instance()
 
         # Start the IOLoop
-        self._ioloop.start()
+        try:
+            self._ioloop.start()
+        except KeyboardInterrupt:
+            self._logger.info('KeyboardInterrupt received, shutting down.')
 
     def run(self):
         """Run the Tinman Process"""
@@ -206,7 +209,7 @@ running Tinman Test Application\n")
         utils.setup_logging(config['Logging'], options.foreground)
 
         # Setup our signal handlers
-        #utils.setup_signals()
+        utils.setup_signals()
 
         # Daemonize if we need to
         if not options.foreground:

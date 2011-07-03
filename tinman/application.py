@@ -16,7 +16,7 @@ from tornado import web
 class TinmanApplication(web.Application):
     """TinmanApplication extends web.Application and handles all sorts of things
     for you that you'd have to handle yourself.
-    
+
     """
 
     def __init__(self, routes=None, **settings):

@@ -6,7 +6,7 @@ Tornado applications.  It includes an application wrapper and a toolbox of
 decorators and utilities.
 """
 setup(name='tinman',
-      version='0.2.5',
+      version='0.2.6',
       description="Tornado application wrapper and toolbox for \
 Tornado development",
       long_description=long_description,
@@ -20,7 +20,7 @@ Tornado development",
       author_email='gmr@myyearbook.com',
       url='http://github.com/gmr/tinman',
       license='BSD',
-      packages=['tinman'],
+      packages=['tinman', 'tinman.clients'],
       requires=['ipaddr', 'pyyaml'],
       entry_points=dict(console_scripts=['tinman=tinman:main']),
       zip_safe=True)

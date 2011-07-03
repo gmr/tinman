@@ -275,11 +275,11 @@ __Redis__
 To setup an automatic connection to Redis siply include a Redis section in your
 configuration file:
 
-Redis:
-    host: localhost
-    port: 6379
-    db: 0
-    password: foo
+    Redis:
+        host: localhost
+        port: 6379
+        db: 0
+        password: foo
 
 When the application is constructed, it will connect to Redis and assign
 the connection and channel to a standard object called tinman which is an

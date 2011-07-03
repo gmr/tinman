@@ -10,8 +10,8 @@ Features
 - Network address whitelisting decorator
 - Method/Function debug logging decorator
 - A full featured application wrapper
-- Automated connection setup for RabbitMQ
-  (memcached, redis, mongodb, mysql, postgresql planned)
+- Automated connection setup for RabbitMQ and Redis
+  (memcached, mongodb, mysql, postgresql planned)
 
 Requirements
 ------------
@@ -73,6 +73,12 @@ or as a daemon.
             username: guest
             password: guest
             virtual_host: /
+
+        # Automatically connect to Redis
+        Redis:
+            host: localhost
+            port: 6379
+            db: 0
 
         Routes:
              -
@@ -235,7 +241,7 @@ When the application is constructed, it will connect to RabbitMQ and assign
 the connection and channel to a standard object called tinman which is an
 attribute of the application.
 
-We construct a copy of a tinman specific object using the tinman.rabbitmq.RabbitMQ
+We construct a copy of a tinman specific object using the tinman.clients.rabbitmq.RabbitMQ
 class. Currently this is only setup to publish messages, though it is the intent
 to add the ability to consume messages asychronously as well. This object is
 accessed from a request handler as: self.application.tinman.rabbitmq
@@ -264,3 +270,53 @@ _Example_
                                                      routing_key,
                                                      event)
 
+__Redis__
+
+To setup an automatic connection to Redis siply include a Redis section in your
+configuration file:
+
+Redis:
+    host: localhost
+    port: 6379
+    db: 0
+    password: foo
+
+When the application is constructed, it will connect to Redis and assign
+the connection and channel to a standard object called tinman which is an
+attribute of the application.
+
+We construct a copy of a tinman specific object using the tinman.clients.redis.Redis
+class. This object is accessed from a request handler as self.application.tinman.redis
+
+This class requires the asynchronous brukva client from https://github.com/evilkost/brukva
+
+_Example_
+
+    from tornado import web
+
+    class RedisTest(web.RequestHandler):
+
+        def initialize(self):
+            # Set a more handy redis handle
+            self.redis = self.application.tinman.redis.client
+
+        @web.asynchronous
+        def get(self, key):
+
+            # Make an asynchronous redis request
+            self.redis.get(key, self.on_redis_response)
+
+        def on_redis_response(self, response):
+            """Since we're fully async here, when redis comes back with our response
+            we'll process it in this function.
+
+            """
+            # If we could not find the response code
+            if not response:
+                self.send_error(404)
+
+            # Write the redis value out as a key/value pair in JSON
+            self.write({key: response})
+
+            # Done
+            self.finish()

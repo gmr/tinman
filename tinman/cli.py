@@ -24,9 +24,6 @@ from tornado import httpserver
 from tornado import ioloop
 from tornado import version as tornado_version
 
-class TinmanConnections(object):
-
-    pass
 
 class TinmanProcess(object):
     """
@@ -47,11 +44,11 @@ class TinmanProcess(object):
 
         Full configuration file
         """
-        # Create a tinman object attribute for access to connections
-        setattr(self._application, 'tinman', TinmanConnections())
-
         # Build a RabbitMQ connection if it exists
-        self._build_rabbitmq_connection(config.get('RabbitMQ', None))
+        self._build_rabbitmq_connection(config.get('RabbitMQ'))
+
+        # Build a Redis connection if it exists
+        self._build_redis_connection(config.get('Redis'))
 
     def _build_rabbitmq_connection(self, config):
         """Create a connection to RabbitMQ if we have it configured in our
@@ -64,17 +61,41 @@ class TinmanProcess(object):
             return
 
         # Import RabbitMQ only if we need it
-        from . import rabbitmq
+        from clients import rabbitmq
 
         # Create our RabbitMQ instance, it will auto-connect and setup based on
         # this
-        rabbitmq = rabbitmq.RabbitMQ(config.get('host', None),
-                                  config.get('port', None),
-                                  config.get('virtual_host', None),
-                                  config.get('username', None),
-                                  config.get('password', None))
-        setattr(self._application.tinman,
-                'rabbitmq', rabbitmq)
+        rabbitmq = rabbitmq.RabbitMQ(config.get('host'),
+                                     config.get('port'),
+                                     config.get('virtual_host'),
+                                     config.get('username'),
+                                     config.get('password'))
+
+        # Add it to our tinman attribute at the application scope
+        self._application.tinman.add('rabbitmq', rabbitmq)
+
+    def _build_redis_connection(self, config):
+        """Create a connection to Redis if we have it configured in our
+        configuration file.
+
+        :param config: Redis node of the configuration file dictionary
+        :type config: dict
+        """
+        if not config:
+            return
+
+        # Import Redis only if we need it
+        from clients import redis
+
+        # Create our Redis instance, it will auto-connect and setup
+        redis = redis.Redis(config.get('host'),
+                            config.get('port'),
+                            config.get('db'),
+                            config.get('password'))
+
+        # Add it to our tinman attribute at the application scope
+        self._application.tinman.add('redis', redis)
+
 
     def _check_required_configuration_parameters(self, config, options):
         """Validates that the required configuration parameters are set.
@@ -102,7 +123,7 @@ class TinmanProcess(object):
     def _process_options(self):
         """Process the cli options returning the options and arguments"""
         usage = "usage: %prog -c <configfile> [options]"
-        version_string = "%%prog %i.%i.%i" % __version__
+        version_string = "%%prog v%s" % __version__
         description = "Tinman's Tornado application runner"
 
         # Create our parser and setup our command line options
@@ -142,7 +163,7 @@ class TinmanProcess(object):
         self._children = []
         for port in config['HTTPServer']['ports']:
             self._logger.info("Starting Tinman v%s process for port %i",
-                              '%i.%i.%i' % __version__, port)
+                              __version__, port)
             # Kick off the child process
             child = multiprocessing.Process(target=self._start_server,
                                             name="tinman-%i" % port,

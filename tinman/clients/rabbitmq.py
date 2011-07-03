@@ -8,7 +8,7 @@ __email__ = 'gmr@myyearbook.com'
 __since__ = '2011-06-06'
 
 
-from . import __version__
+from tinman import __version__
 import json
 import logging
 from pika import credentials
@@ -54,8 +54,7 @@ class RabbitMQ(object):
         self._channel = None
 
         # Set our app_id for publishing messages
-        version = '%i.%i.%i' % __version__
-        self.app_id = "%s/%s" % (RabbitMQ.DEFAULT_APP_ID, version)
+        self.app_id = "%s/%s" % (RabbitMQ.DEFAULT_APP_ID, __version__)
 
         # Set our delivery mode for publishing messages
         self.delivery_mode = RabbitMQ.DEFAULT_DELIVERY_MODE

@@ -5,14 +5,15 @@ Core Tinman imports
 __author__ = 'Gavin M. Roy'
 __email__ = '<gmr@myyearbook.com>'
 __since__ = '2011-03-14'
-__version__ = 0,2,3
+__version__ = "0.2.4"
 
 __all__ = ['tinman.application',
            'tinman.cache',
            'tinman.cli',
-           'tinman.rabbitmq',
+           'tinman.clients',
            'tinman.utils',
            'tinman.whitelist']
+
 
 def main(*args):
 

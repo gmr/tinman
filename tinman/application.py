@@ -14,11 +14,18 @@ import os
 from tornado import web
 
 class TinmanApplication(web.Application):
+    """TinmanApplication extends web.Application and handles all sorts of things
+    for you that you'd have to handle yourself.
+    
+    """
 
     def __init__(self, routes=None, **settings):
 
         # Define our logger
         self._logger = logging.getLogger('tinman')
+
+        # Create a TinmanAttributes for assignments to application scope
+        self.tinman = TinmanAttributes()
 
         if not isinstance(routes, list):
             raise ValueError("Routes parameter must be a list of tuples")
@@ -41,7 +48,7 @@ class TinmanApplication(web.Application):
 
             # Set the app version from the version setting in this file
             if 'version' not in settings:
-                settings['version'] = "%i.%i.%i" % __version__
+                settings['version'] = __version__
 
             # Set the base path for use inside the app since all code locations
             # are not relative
@@ -52,11 +59,11 @@ class TinmanApplication(web.Application):
             # If we have a static_path
             if 'static_path' in settings:
                 # Replace __base_path__ with the path this is running from
-                settings['static_path'] =\
+                settings['static_path'] = \
                     settings['static_path'].replace('__base_path__',
                                                     settings['base_path'])
 
-        if settings.get('route_decorator', None):
+        if settings.get('route_decorator'):
             # @TODO make this work with a route decorator
             del settings['route_decorator']
             raise AttributeError("No defined routes")
@@ -93,7 +100,7 @@ class TinmanApplication(web.Application):
 
         # If we have a regex based route, set it up with a raw string
         if attributes[0] == 're':
-            route =r"%s" % attributes[1]
+            route = r"%s" % attributes[1]
             module = attributes[2]
             if len(attributes) == 4:
                 kwargs = attributes[3]
@@ -123,3 +130,25 @@ class TinmanApplication(web.Application):
 
         # Return the route
         return tuple(prepared_route)
+
+
+class TinmanAttributes(object):
+    """A base object to hang attributes off of for application level scope that
+    can be used across connections.
+
+    """
+
+    def add(self, name, value):
+        """Add an attribute value to our object instance.
+
+        :param name: Connection attribute name
+        :type name: str
+        :param value: Value to associate with the attribute
+        :type value: any
+        :raises: AttributeError
+        """
+
+        if hasattr(self, name):
+            raise AttributeError('%s already exists' % name)
+
+        setattr(self, name, value)

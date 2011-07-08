@@ -197,7 +197,7 @@ class TinmanProcess(object):
         except socket.error as error:
             # If we couldn't bind to IPv6 (Tornado 2.0+)
             if str(error).find('bad family'):
-                http_server.bind(port, family=socket.socket.AF_INET)
+                http_server.bind(port, family=socket.AF_INET)
                 http_server.server.start(1)
 
         # Get a handle to the instance of IOLoop

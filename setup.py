@@ -6,7 +6,7 @@ Tornado applications.  It includes an application wrapper and a toolbox of
 decorators and utilities.
 """
 setup(name='tinman',
-      version='0.2.6',
+      version='0.2.7',
       description="Tornado application wrapper and toolbox for \
 Tornado development",
       long_description=long_description,

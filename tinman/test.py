@@ -34,4 +34,4 @@ class DefaultHandler(web.RequestHandler):
                                 "query": self.request.query,
                                 "remote_ip": self.request.remote_ip,
                                 "version": self.request.version},
-                    "tinman": {"version":  "%i.%i.%i" % tinman.__version__}})
+                    "tinman": {"version":  tinman.__version__}})

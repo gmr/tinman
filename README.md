@@ -135,7 +135,7 @@ Or you could specify a base_path:
         Application:
             base_path: /home/foo/mywebsite
             static_path: __base_path__/static
-            template_path: __template_path__/templates
+            template_path: __base_path__/templates
 
 If you are not going to install your app as a python package, you should set a
 base_path so that tinman knows what directory to insert into the Python path to

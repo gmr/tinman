@@ -114,11 +114,7 @@ class TinmanProcess(object):
         if 'Logging' not in config:
             raise AttributeError("Missing Logging section in configuration")
 
-        if not options.route_decorator and 'Routes' not in config:
-            raise AttributeError("Missing Routes section in configuration")
-
-        if not options.route_decorator and \
-           not isinstance(config['Routes'], list):
+        if not isinstance(config['Routes'], list):
             raise AttributeError("Error in Routes section in configuration")
 
     def _process_options(self):
@@ -141,12 +137,6 @@ class TinmanProcess(object):
                           dest="foreground",
                           default=False,
                           help="Run interactively in console")
-        parser.add_option("-r", "--route-decorator",
-                          action="store_true",
-                          dest="route_decorator",
-                          default=False,
-                          help="Utilize the route decorator instead of the Routes\
-                                section of the config")
 
         # Parse our options and arguments
         return parser.parse_args()

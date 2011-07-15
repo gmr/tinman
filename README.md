@@ -114,6 +114,33 @@ In your console you should see output similar to:
 
 You should now be able to access a test webpage on port 8000. CTRL-C will exit.
 
+Configuration Notes
+-------------------
+When setting the template_path or static_path values in the configuration, you
+may use two variables to set the location for the values.  For example instead
+of setting something like:
+
+        Application:
+            static_path: /home/foo/mywebsite
+
+You can install your site as a non-zip safe python package and use:
+
+        Application:
+            package_name: mywebsite
+            static_path: __package_path__/static
+            template_path: __package_path__/templates
+
+Or you could specify a base_path:
+
+        Application:
+            base_path: /home/foo/mywebsite
+            static_path: __base_path__/static
+            template_path: __template_path__/templates
+
+If you are not going to install your app as a python package, you should set a
+base_path so that tinman knows what directory to insert into the Python path to
+be able to load your request handlers and such.
+
 Decorators
 ----------
 __tinman.whitelisted__

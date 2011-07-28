@@ -10,7 +10,7 @@ The decorator takes two arguments:
     The callable will receive the username and password provided by the end
     user in a challenge.
 
-Example usage: 
+Example usage (also see helloworld_basic.py in the examples): 
 
     # define the validation callback.
     def validate(uname, passwd):

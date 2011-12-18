@@ -32,7 +32,7 @@ class TinmanProcess(object):
     """
 
     def __init__(self):
-
+        """Create a TinmanProcess object"""
         # Set a default IOloop to None
         self._ioloop = None
 
@@ -43,7 +43,8 @@ class TinmanProcess(object):
         """Build and attach our supported connections to our IOLoop and
          application object.
 
-        Full configuration file
+        :param dict config: Full configuration file from Tinman
+
         """
         # Build a RabbitMQ connection if it exists
         self._build_rabbitmq_connection(config.get('RabbitMQ'))
@@ -55,8 +56,8 @@ class TinmanProcess(object):
         """Create a connection to RabbitMQ if we have it configured in our
         configuration file.
 
-        :param config: RabbitMQ node of the configuration file dictionary
-        :type config: dict
+        :param dict config: RabbitMQ node of the configuration file dictionary
+
         """
         if not config:
             return
@@ -142,19 +143,52 @@ class TinmanProcess(object):
         return parser.parse_args()
 
     def _shutdown_signal_handler(self, signum, frame):
-        """
-        Called on SIGTERM to shutdown the sub-process
-        """
+        """Called on SIGTERM to shutdown the sub-process"""
         if self._ioloop:
             self._ioloop.stop()
 
+    def _ssl_fixup(self, config):
+        """Check the config to see if SSL configuration options have been passed
+        and replace none, option, and required with the correct values in
+        the certreqs attribute if it is specified.
+
+        :param dict config: HTTPServer configuration
+        :returns: dict
+
+        """
+        if 'cert_reqs' in config['ssl_options']:
+
+            # Build a mapping dictionary
+            import ssl
+            reqs = {'none': ssl.CERT_NONE,
+                    'optional': ssl.CERT_OPTIONAL,
+                    'required': ssl.CERT_REQUIRED}
+
+            # Get the value
+            cert_reqs = reqs[config['ssl_options']['cert_reqs']]
+
+            # Remap the value
+            config['ssl_options']['cert_reqs'] = cert_reqs
+
+        return config
+
     def _start_processes(self, config):
+        """Start the tornado.httpserver.HTTPServer processes for the given
+        config dictionary.
+
+        :param dict config: The configuration dictionary parsed by Tinman
+
+        """
+        # Rewrite the SSL certreqs option if it exists
+        if 'ssl_options' in config['HTTPServer']:
+            config['HTTPServer'] = self._ssl_fixup(config['HTTPServer'])
 
         # Loop through and kick off our processes
         self._children = []
         for port in config['HTTPServer']['ports']:
             self._logger.info("Starting Tinman v%s process for port %i",
                               __version__, port)
+
             # Kick off the child process
             child = multiprocessing.Process(target=self._start_server,
                                             name="tinman-%i" % port,
@@ -163,10 +197,15 @@ class TinmanProcess(object):
             child.start()
 
         # Log our completion
-        self._logger.debug("All children spawned")
+        self._logger.debug("%i child(ren) spawned", len(self._children))
 
     def _start_server(self, config, port):
+        """Start the HTTP server for this process with the given config and port
 
+        :param dict config: The configuration dictionary parsed by Tinman
+        :param int port: The port to listen on
+
+        """
         # Setup our signal handler
         signal.signal(signal.SIGTERM, self._shutdown_signal_handler)
 

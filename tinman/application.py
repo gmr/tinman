@@ -56,6 +56,11 @@ class TinmanApplication(web.Application):
         # Prepare the paths
         self._prepare_paths()
 
+        # If a translation path is specified, load the translations
+        if 'translation_path' in self._settings:
+            from tornado import locale
+            locale.load_translations(self._settings['translation_path'])
+
         # Set the app version from the version setting in this file
         self._prepare_version()
 
@@ -88,7 +93,7 @@ class TinmanApplication(web.Application):
 
         # Create a list of variables to replace our values with
         paths = list()
-        for path_name in ['static_path', 'template_path']:
+        for path_name in ['static_path', 'template_path', 'translation_path']:
             if path_name in self._settings:
                 paths.append(path_name)
 
@@ -135,7 +140,6 @@ class TinmanApplication(web.Application):
 
         """
         self._settings[path_name] = path_value
-
 
     def _prepare_route(self, attributes):
         """Take a given inbound list for a route and parse it creating the

@@ -11,7 +11,7 @@ decorators and utilities.
 - Method/Function debug logging decorator
 - Automated connection setup for RabbitMQ and Redis
   (memcached, mongodb, mysql, postgresql planned)
-- A CouchDB Template Loader
+- Support for a External Template Loaders including Tinman's CouchDB Template Loader
 
 ## Requirements
 - ipaddr
@@ -48,6 +48,7 @@ The following are the keys that are available to be used for your Tinman/Tornado
 - cookie_secret: A salt for signing cookies when using secure cookies
 - login_url: Login URL when using Tornado's @authenticated decorator
 - static_path: The path to static files
+- template_loader: The python module.Class to override the default template loader with
 - template_path: The path to template files
 - translation_path: The path to translation files
 - ui_modules: Module for the UI modules classes (ie mysite.modules)
@@ -94,7 +95,7 @@ Configure the tornado.httpserver.HTTPServer with the following options:
     - ca_certs: One of none, optional or required
 - xheaders: Enable X-Header support in tornado.httpserver.HTTPServer
 
-##### Logging Options
+#### Logging Options
 Enable standard python logging with the following options:
 
 - directory: Optional log file output directory
@@ -133,7 +134,7 @@ your route definition, insert the string "re" before the route regex.
         - /(c[a-f0-9]f[a-f0-9]{1,3}-[a-f0-9]{8}).gif
         - test.example.Pixel
 
-#### TemplateLoader
+#### Template Loader
 The TemplateLoader configuration option is detailed the External Template Loading
 section of the document.
 
@@ -403,12 +404,32 @@ This class requires the asynchronous brukva client from https://github.com/evilk
             # Done
             self.finish()
 
-## External Template Loading
-Tornado supports the ability to specify external template loaders for the core
-Template object. Tinman offers a CouchDB based template loader which creates
-an easy way to manage Tornado templates without having to redistribute or update
-the core Tinman application itself.
-
 ### CouchDB Loader
 
-To-Be Documented
+Tinman includes tinman.loader.CouchDBLoader to enable the storage of templates
+in CouchDB to provide a common stemplate storage mechanism across multiple
+servers.
+
+Templates stored in CouchDB are stored with the full path as the document key
+and the template value is stored in the document using the key "template"
+
+When storing templates in CouchDB it is important that the forward-slash (/) is
+replaced with a colon (:) as the key value in CouchDB, or it will not find the
+stored file.
+
+For example a template with a filesystem path of /foo/bar/template.html would
+be stored with a key of foo:bar:template.html in CouchDB but still referenced
+as /foo/bar/template.html everywhere else.
+
+#### Example templates document from CouchDB
+
+    {
+       "_id": "base.html",
+       "_rev": "1-18d104181a15f617a929c221d01423da",
+       "template": "<html>\n  <head>\n    <title>{% block \"title\" %}Title{% end %}</title>\n  </head>\n  <body>\n    <h1>Hello, World!</h1>\n  </body>\n</html>"
+    },
+    {
+       "_id": "pages:home.html",
+       "_rev": "2-c3c06f5a6d6a7b8149e0a700c67aeb41",
+       "template": "{%  extends \"base.html\" %} \n{% block title %}Homepage{% end %}"
+    }

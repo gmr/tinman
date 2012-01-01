@@ -38,7 +38,7 @@ class TinmanApplication(web.Application):
     def __init__(self, routes=None, **settings):
 
         # Define our logger
-        self._logger = logging.getLogger('tinman')
+        self._logger = logging.getLogger('tinman.application')
 
         # Assign the settings
         self._settings = settings
@@ -58,11 +58,16 @@ class TinmanApplication(web.Application):
 
         # If a translation path is specified, load the translations
         if 'translation_path' in self._settings:
+            self._logger.info('Loading translations from %s',
+                              self._settings['translation_path'])
             from tornado import locale
             locale.load_translations(self._settings['translation_path'])
 
         # Set the app version from the version setting in this file
         self._prepare_version()
+
+        # Setup the UI modules
+        self._prepare_transforms()
 
         # Setup the UI modules
         self._prepare_uimodules()
@@ -78,6 +83,7 @@ class TinmanApplication(web.Application):
         :raises: ValueError
 
         """
+        self._logger.debug('Preparing paths')
         # Try and load a package if specified
         package_path = None
         if 'package_name' in self._settings:
@@ -203,6 +209,7 @@ class TinmanApplication(web.Application):
         """
         if not isinstance(routes, list):
             raise ValueError("Routes parameter must be a list of tuples")
+        self._logger.debug('Preparing routes')
 
         # Our prepared_routes is what we pass in to Tornado
         prepared_routes = list()
@@ -223,9 +230,25 @@ class TinmanApplication(web.Application):
         # Return the routes we prepared
         return prepared_routes
 
+    def _prepare_transforms(self):
+        """Prepare the UI Modules object"""
+        if 'transforms' in self._settings:
+            self._logger.info('Preparing %i transform class(es) for import',
+                              len(self._settings['transforms']))
+            transforms = list()
+            for transform in self._settings['transforms']:
+                try:
+                    # Assign the modules to the import
+                    transforms.append(utils.import_namespaced_class(transform))
+                except ImportError as error:
+                    self._logger.error("Error importing UI Modules %s: %s",
+                                       self._settings['ui_modules'], error)
+            self._settings['transforms'] = transforms
+
     def _prepare_uimodules(self):
         """Prepare the UI Modules object"""
         if 'ui_modules' in self._settings:
+            self._logger.debug('Preparing uimodules for import')
             try:
                 # Assign the modules to the import
                 self._settings['ui_modules'] = \

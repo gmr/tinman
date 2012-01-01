@@ -20,6 +20,7 @@ decorators and utilities.
 ## Optional Dependencies
 - brukva
 - pika >= v0.9.5
+- psycopg2 >= 2.4.2
 
 ## Application Runner
 The tinman application runner works off a YAML configuration file format and
@@ -50,6 +51,7 @@ The following are the keys that are available to be used for your Tinman/Tornado
 - static_path: The path to static files
 - template_loader: The python module.Class to override the default template loader with
 - template_path: The path to template files
+- transforms: A list of transformation objects to add to the application in module.Class format
 - translation_path: The path to translation files
 - ui_modules: Module for the UI modules classes (ie mysite.modules)
 - xsrf_cookies: Enable xsrf_cookie mode for forms
@@ -164,6 +166,13 @@ The following is an example tinman application configuration:
             address: /dev/log
             facility: LOG_LOCAL6
 
+    # Automatically connect to PostgreSQL
+    Postgres:
+        host: localhost
+        port: 5432
+        dbname: postgres
+        user: postgres
+
     # Automatically connect to RabbitMQ
     RabbitMQ:
         host: localhost
@@ -179,9 +188,7 @@ The following is an example tinman application configuration:
         db: 0
 
     Routes:
-         -
-            - /
-            - test.example.Home
+         -[/, test.example.Home]
          -
             # /c1f1-7c5d9e0f.gif
             - re
@@ -313,6 +320,41 @@ has the concept of auto-setup and connect services. Initially, RabbitMQ is the
 only connectivity that is supported (via the Pika library). It is intended to
 add support for all major service types that have asynchronous support for the
 Tornado IO loop.
+
+### PostgreSQL
+ To setup an automatic connection to PostgreSQL simply include a Postgres section
+ in your configuration file:
+
+     Postgres:
+         host: localhost
+         port: 5432
+         dbname: postgres
+         user: postgres
+
+ *NOTE* Currently this support is not asynchronous
+
+ When the application is constructed, it will connect to PostgreSQL and assign
+ the connection to a standard object called tinman which is an attribute of the
+ application. The connection will automatically be setup to use the autocommit
+ isolation level.
+
+ We construct a copy of a tinman specific object using the tinman.clients.pgsql.PgSQL
+ class.
+
+ This object is accessed from a request handler as: self.application.tinman.pgsql
+
+ To get a cursor, simply use the cursor attribute of the PgSQL object. This will
+ return a psycopg2.extras.DictCursor object.
+
+#### Example
+
+    class MyRequestHandler(web.RequestHandler):
+        def get(self, *args, **kwargs):
+            cursor = self.application.tinman.pgsql.cursor
+            cursor.execute('SELECT * FROM my_table;')
+            data = cursor.fetchall()
+            self.render('my-template.html', data=data)
+
 
 ### RabbitMQ
 To setup an automatic connection to RabbitMQ simply include a RabbitMQ section

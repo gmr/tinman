@@ -24,5 +24,5 @@ Tornado development",
       license='BSD',
       packages=['tinman', 'tinman.clients'],
       requires=['ipaddr', 'pyyaml'],
-      entry_points=dict(console_scripts=['tinman=tinman:main']),
+      entry_points=dict(console_scripts=['tinman=tinman.cli:main']),
       zip_safe=True)

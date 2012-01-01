@@ -9,8 +9,8 @@ decorators and utilities.
 - RequestHandler output caching
 - Network address whitelisting decorator
 - Method/Function debug logging decorator
-- Automated connection setup for RabbitMQ and Redis
-  (memcached, mongodb, mysql, postgresql planned)
+- Automated connection setup for PostgreSQL, RabbitMQ and Redis
+  (memcached, mongodb, mysql planned)
 - Support for a External Template Loaders including Tinman's CouchDB Template Loader
 
 ## Requirements
@@ -339,9 +339,11 @@ Tornado IO loop.
  isolation level.
 
  We construct a copy of a tinman specific object using the tinman.clients.pgsql.PgSQL
- class.
+ class. This class attempts to cache connections to PostgreSQL at the module level,
+ reducing the amount of connection/disconnects needed. This object is accessed
+ from a request handler as:
 
- This object is accessed from a request handler as: self.application.tinman.pgsql
+    self.application.tinman.pgsql
 
  To get a cursor, simply use the cursor attribute of the PgSQL object. This will
  return a psycopg2.extras.DictCursor object.

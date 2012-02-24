@@ -28,7 +28,7 @@ class Redis(object):
         :param password: Redis database password
         :type password: str
         """
-        self._logger = logging.getLogger('tinman.clients.Redis')
+        self._logger = logging.getLogger(__name__)
 
         ioloop_ = ioloop.IOLoop.instance()
 

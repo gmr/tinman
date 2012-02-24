@@ -12,6 +12,8 @@ decorators and utilities.
 - Automated connection setup for PostgreSQL, RabbitMQ and Redis
   (memcached, mongodb, mysql planned)
 - Support for a External Template Loaders including Tinman's CouchDB Template Loader
+- Flexible logging configuration allowing for custom formatters, filters handlers and
+  setting logging levels for individual packages.
 
 ## Requirements
 - ipaddr
@@ -157,14 +159,34 @@ The following is an example tinman application configuration:
         xheaders: True
 
     Logging:
-        #filename: log.txt
-        format: "%(module)-20s# %(lineno)-5d %(levelname) -10s %(asctime)s  %(message)s"
-        # Valid values: debug, info, warning, error, critical
-        level: debug
-        handler: syslog
+      filters:
+        tinman: tinman
+        pika: pika
+        myapp: myapp.handlers
+      formatters:
+        verbose: "%(levelname) -10s %(asctime)s %(funcName) -25s: %(message)s"
+        syslog: "%(levelname)s <PID %(process)d:%(processName)s> %(message)s"
+      handlers:
+        console:
+          class: logging.StreamHandler
+          formatter: verbose
+          level: DEBUG
+          debug_only: True
+          filters:
+            - myapp
+            - tinman
         syslog:
-            address: /dev/log
-            facility: LOG_LOCAL6
+          class: logging.handlers.SysLogHandler
+          facility: local6
+          address: /dev/log
+          formatter: syslog
+          level: INFO
+          filters:
+            - myapp
+            - tinman
+            - pika
+        levels:
+          pika: INFO
 
     # Automatically connect to PostgreSQL
     Postgres:

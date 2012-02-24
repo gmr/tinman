@@ -45,7 +45,7 @@ class RabbitMQ(object):
         """
 
         # Create a logger instance
-        self._logger = logging.getLogger('tinman.rabbitmq')
+        self._logger = logging.getLogger(__name__)
 
         # We don't have a valid connection until the initial connect is done
         self._connection = None

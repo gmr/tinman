@@ -11,6 +11,7 @@ from . import __version__
 
 # General imports
 import logging
+import logging_config
 import multiprocessing
 import signal
 import socket
@@ -38,7 +39,11 @@ class TinmanProcess(object):
         self._config = config
 
         # Get our logger
-        self._logger = logging.getLogger('tinman.process')
+        self._logger = logging.getLogger(__name__)
+
+        # Setup logging
+        self._setup_logging(config['Logging'],
+                            config['Application'].get('debug', False))
 
     def _build_connections(self):
         """Build and attach our supported connections to our IOLoop and
@@ -100,7 +105,7 @@ class TinmanProcess(object):
         # Add it to our tinman attribute at the application scope
         self._app.tinman.add('rabbitmq', rabbitmq)
 
-    def _build_redis_connection(self, config):
+    def _build_redis_connection(self):
         """Create a connection to Redis if we have it configured in our
         configuration file.
 
@@ -147,6 +152,13 @@ class TinmanProcess(object):
         # Return the arguments
         return args
 
+    def _setup_logging(self, config, debug):
+        """Construct the logging config object and
+
+        """
+        self._logging = logging_config.Logging(config, debug)
+        self._logging.setup()
+
     def _start_httpserver(self, port, args):
         """Start the HTTPServer
 
@@ -165,6 +177,9 @@ class TinmanProcess(object):
             if str(error).find('bad family'):
                 http_server.bind(port, family=socket.AF_INET)
                 http_server.start(1)
+
+        # Patch in the HTTP Port for Logging
+        self._app.http_port = port
 
     def _subprocess_start(self, config, port):
         """Start the process specific application and HTTP server for the given

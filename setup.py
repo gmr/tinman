@@ -1,17 +1,15 @@
 from setuptools import setup
 from tinman import __version__
 
-long_description = """\
-Tinman is an take what you need package designed to speed development of
-Tornado applications.  It includes an application wrapper and a toolbox of
-decorators and utilities.
-"""
 
 setup(name='tinman',
       version=__version__,
-      description="Tornado application wrapper and toolbox for \
-Tornado development",
-      long_description=long_description,
+      description=("Tornado application wrapper and toolset for Tornado "
+                   "development"),
+      long_description=('Tinman is a take what you need package designed to '
+                        'speed development of Tornado applications. It '
+                        'includes an application wrapper and a toolbox of '
+                        'decorators and utilities.'),
       classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -23,6 +21,16 @@ Tornado development",
       url='http://github.com/gmr/tinman',
       license='BSD',
       packages=['tinman', 'tinman.clients'],
-      requires=['ipaddr', 'pyyaml'],
+      requires=['ipaddr',
+                'logging_config',
+                'python_daemon',
+                'pyyaml'],
+      extras_require= {'RabbitMQ': 'pika',
+                       'PostgreSQL': 'psycopg2',
+                       'LDAP': 'ldap',
+                       'Redis': 'brukva'},
+      data_files=[('/usr/local/share/tinamn/init.d', ['etc/init.d/tinman']),
+                  ('/usr/local/share/tinamn/', ['etc/example.yaml', 'README.md']),
+                  ('/usr/local/share/tinamn/sysconfig', ['etc/sysconfig/tinman'])],
       entry_points=dict(console_scripts=['tinman=tinman.cli:main']),
       zip_safe=True)

@@ -14,9 +14,46 @@ HTTPServer:
     xheaders: True
 
 Logging:
-    filename: log.txt
-    format: "%(module)-12s# %(lineno)-5d %(levelname) -10s %(asctime)s  %(message)s"
-    level: debug
+  loggers:
+    tinman:
+      level: INFO
+      propagate: True
+  filters:
+    tinman: tinman
+    myapp: myapp.handlers
+  formatters:
+    verbose: "%(levelname) -10s %(asctime)s %(name) -30s %(funcName) -25s: %(message)s"
+    syslog: "%(levelname)s <PID %(process)d:%(processName)s> %(name).%(funcName)s: %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: verbose
+      debug_only: True
+      filters:
+        - myapp
+        - tinman
+      level: DEBUG
+    file:
+      filename: /var/log/tinman.log
+      class: logging.RotatingFileHandler
+      mode: a
+      maxBytes: 104857600
+      backupCount: 6
+      encoding: UTF-8
+      delay: False
+      formatter: verbose
+      filters:
+        - myapp
+        - tinman
+    syslog:
+      class: logging.handlers.SysLogHandler
+      facility: local6
+      address: /var/run/syslog
+      formatter: syslog
+      level: INFO
+      filters:
+        - myapp
+        - tinman
 
 # As of 0.2.1 having this automatically creates a RabbitMQ connection for your tinman app
 # It is exposed as application.tinman.rabbitmq

@@ -12,6 +12,7 @@ from . import utils
 from . import __version__
 
 import logging
+import logging_config
 import optparse
 import os
 import sys
@@ -23,9 +24,9 @@ class TinmanCLI(object):
     def __init__(self):
         """Create a new instance of the TinmanCLI class"""
         self._children = list()
-        self._config = None
+        self._config = dict()
         self._options = None
-        self._logger = logging.getLogger('tinman.cli')
+        self._logger = logging.getLogger(__name__)
 
     def _check_required_configuration_parameters(self):
         """Validates that the required configuration parameters are set.
@@ -51,13 +52,9 @@ class TinmanCLI(object):
         debug mode.
 
         """
-        # Daemonize if we need to
-        if not self._options.foreground:
-            utils.daemonize(pidfile=self._config.get("pidfile", None),
-                            user=self._config.get("user", None),
-                            group=self._config.get("group", None))
-        else:
-            self._config['Application']['debug'] = True
+        utils.daemonize(pidfile=self._config.get("pidfile", None),
+                        user=self._config.get("user", None),
+                        group=self._config.get("group", None))
 
     def _fixup_configuration(self):
         """Rewrite the SSL certreqs option if it exists, do this once instead
@@ -93,11 +90,12 @@ class TinmanCLI(object):
 
         """
         # No configuration file?
-        if self._options.config is None:
-            return self._load_test_config()
+        if not self._options.config:
+            self._config = self._load_test_config()
+            return
 
         # Load the configuration file
-        self._config = utils.load_configuration_file(self._options.config)
+        self._config = utils.load_yaml_file(self._options.config)
 
         # Fixup the any of the configuration as needed
         self._fixup_configuration()
@@ -126,6 +124,7 @@ class TinmanCLI(object):
 
         parser.add_option("-c", "--config",
                           action="store",
+                          default=False,
                           dest="config",
                           help="Specify the configuration file for use")
         parser.add_option("-f", "--foreground",
@@ -147,6 +146,15 @@ class TinmanCLI(object):
                 os.unlink(self._config['pidfile'])
             except OSError as e:
                 self._logger.error("Could not remove pidfile: %s", e)
+
+    def _setup_logging(self, config, debug):
+        """Construct the logging config object and
+
+        """
+        self._logging = logging_config.Logging(config, debug)
+        self._logging.setup()
+        self._logging.remove_root_logger()
+        self._logging.remove_existing_loggers()
 
     def _terminate_children(self):
         """Send term signals to all of the children and wait for them to
@@ -191,6 +199,9 @@ class TinmanCLI(object):
         # Load the configuration
         self._load_configuration()
 
+        # Setup the logging for this process
+        self._setup_logging(self._config['Logging'], self._options.foreground)
+
         # Check our required options
         self._check_required_configuration_parameters()
 
@@ -198,17 +209,19 @@ class TinmanCLI(object):
         if 'base_path' in self._config:
             sys.path.insert(0, self._config['base_path'])
 
-        # Setup our logging
-        utils.setup_logging(self._config['Logging'], self._options.foreground)
+        # Set debug if needed
+        if self._options.foreground:
+            self._config['Application']['debug'] = True
 
         # Setup our signal handlers
         utils.setup_signals()
 
         # Daemonize if we need to
-        self._daemonize()
+        if not self._options.foreground:
+            self._daemonize()
 
         # Create the core object
-        tinman = self._tinman_process()
+        self._tinman_process()
 
         # Block while running
         self._wait_while_running()

@@ -21,7 +21,6 @@ except ImportError:
 
 from functools import wraps
 from socket import gethostname
-from tornado.options import enable_pretty_logging
 
 # Callback handlers
 rehash_handler = None
@@ -30,43 +29,8 @@ shutdown_handler = None
 # Application state for shutdown
 running = False
 
-
-def log_method_call(method):
-    """
-    Logging decorator to send the method and arguments to logging.debug
-    """
-    @wraps(method)
-    def debug_log(*args, **kwargs):
-
-        if logging.getLogger('').getEffectiveLevel() == logging.DEBUG:
-
-            # Get the class name of what was passed to us
-            try:
-                class_name = args[0].__class__.__name__
-            except AttributeError:
-                class_name = 'Unknown'
-            except IndexError:
-                class_name = 'Unknown'
-
-            # Build a list of arguments to send to the logging
-            log_args = list()
-            for x in xrange(1, len(args)):
-                log_args.append(args[x])
-            if len(kwargs) > 1:
-                log_args.append(kwargs)
-
-            # If we have arguments, log them as well, otherwise just the method
-            if log_args:
-                logging.debug("%s.%s(%r) Called", class_name, method.__name__,
-                             log_args)
-            else:
-                logging.debug("%s.%s() Called", class_name, method.__name__)
-
-        # Actually execute the method
-        return method(*args, **kwargs)
-
-    # Return the debug_log function to the python stack for execution
-    return debug_log
+# Get a _LOGGER for the module
+_LOGGER = logging.getLogger(__name__)
 
 
 def application_name():
@@ -96,7 +60,6 @@ def daemonize(pidfile=None, user=None, group=None):
     * user: User to run as, defaults to current user
     * group: Group to run as, defaults to current group
     """
-
     # Flush stdout and stderr
     sys.stdout.flush()
     sys.stderr.flush()
@@ -155,137 +118,29 @@ def daemonize(pidfile=None, user=None, group=None):
 
     # Set the running user
     if user and group:
-        logging.info("Changing the running user:group to %s:%s", user, group)
+        _LOGGER.info("Changing the running user:group to %s:%s", user, group)
     elif user:
-        logging.info("Changing the running user to %s", user)
+        _LOGGER.info("Changing the running user to %s", user)
     elif group:
-        logging.info("Changing the group to %s", group)
+        _LOGGER.info("Changing the group to %s", group)
 
     # If we have a uid and it's not for the running user
     if uid > -1 and uid != os.geteuid():
             try:
                 os.seteuid(uid)
-                logging.debug("User changed to %s(%i)", user, uid)
+                _LOGGER.debug("User changed to %s(%i)", user, uid)
             except OSError as e:
-                logging.error("Could not set the user: %s", str(e))
+                _LOGGER.error("Could not set the user: %s", str(e))
 
     # if we have a gid and it's not for the current group
     if gid > -1 and gid != os.getegid():
         try:
             os.setgid(gid)
-            logging.debug("Process group changed to %s(%i)", group, gid)
+            _LOGGER.debug("Process group changed to %s(%i)", group, gid)
         except OSError as e:
-            logging.error("Could not set the group: %s", str(e))
+            _LOGGER.error("Could not set the group: %s", str(e))
 
     return True
-
-
-def load_configuration_file(config_file):
-    """
-    Load our YAML configuration file from disk or error out
-    if not found or parsable
-    """
-    try:
-        with file(config_file, 'r') as f:
-            config = yaml.load(f)
-
-    except IOError:
-        sys.stderr.write('Configuration file not found "%s"\n' % config_file)
-        sys.exit(1)
-
-    except yaml.scanner.ScannerError as err:
-        sys.stderr.write('Invalid configuration file "%s":\n%s\n' % \
-                         (config_file, err))
-        sys.exit(1)
-
-    return config
-
-
-def setup_logging(config, debug=False):
-    """
-    Setup the logging module to respect our configuration values.
-    Expects a dictionary called config with the following parameters
-
-    * directory:   Optional log file output directory
-    * filename:    Optional filename, not needed for syslog
-    * format:      Format for non-debug mode
-    * level:       One of debug, error, warning, info
-    * handler:     Optional handler
-    * syslog:      If handler == syslog, parameters for syslog
-      * address:   Syslog address
-      * facility:  Syslog facility
-
-    Passing in debug=True will disable any log output to anything but stdout
-    and will set the log level to debug regardless of the config.
-    """
-    # Set logging levels dictionary
-    logging_levels = {'debug':    logging.DEBUG,
-                      'info':     logging.INFO,
-                      'warning':  logging.WARNING,
-                      'error':    logging.ERROR,
-                      'critical': logging.CRITICAL}
-
-    # Get the logging value from the dictionary
-    logging_level = config['level']
-
-    if debug:
-
-        # Override the logging level to use debug mode
-        config['level'] = logging.DEBUG
-
-        # If we have specified a file, remove it so logging info goes to stdout
-        if 'filename' in config:
-            del config['filename']
-
-    else:
-
-        # Use the configuration option for logging
-        config['level'] = logging_levels.get(config['level'], logging.NOTSET)
-
-    # Pass in our logging config
-    logging.basicConfig(**config)
-    logging.info('Log level set to %s' % logging_level)
-
-    # Get the default logger
-    default_logging = logging.getLogger()
-
-    # Remove the default stream handler
-    stream_handler = None
-    for handler in default_logging.handlers:
-        if isinstance(handler, logging.StreamHandler):
-            stream_handler = handler
-            break
-
-    # Use colorized output
-    if config['level'] == logging.DEBUG:
-        enable_pretty_logging()
-
-    # If we have supported handler
-    elif 'handler' in config:
-
-        # If we want to syslog
-        if config['handler'] == 'syslog':
-
-            facility = config['syslog']['facility']
-            import logging.handlers as handlers
-
-            # If we didn't type in the facility name
-            if facility in handlers.SysLogHandler.facility_names:
-
-                # Create the syslog handler
-                address = config['syslog']['address']
-                facility = handlers.SysLogHandler.facility_names[facility]
-                syslog = handlers.SysLogHandler(address=address,
-                                                facility=facility)
-                # Add the handler
-                default_logging.addHandler(syslog)
-
-                # Remove the StreamHandler
-                if stream_handler:
-                    default_logging.removeHandler(stream_handler)
-            else:
-                logging.error('%s:Invalid facility, syslog logging aborted',
-                              application_name())
 
 
 def shutdown():
@@ -316,7 +171,7 @@ def _shutdown_signal_handler(signum, frame):
     """
     Called on SIGTERM to shutdown the application
     """
-    logging.info("SIGTERM received, shutting down")
+    _LOGGER.info("SIGTERM received, shutting down")
     shutdown()
 
 
@@ -324,7 +179,7 @@ def _rehash_signal_handler(signum, frame):
     """
     Would be cool to handle this and effect changes in the config
     """
-    logging.info("SIGHUP received, rehashing config")
+    _LOGGER.info("SIGHUP received, rehashing config")
     if rehash_handler:
         rehash_handler()
 
@@ -347,3 +202,27 @@ def import_namespaced_class(path):
 
     # Return the class handle
     return class_handle
+
+
+def load_yaml_file(config_file):
+    """ Load the YAML configuration file from disk or error out
+    if not found or parsable.
+
+    :param str config_file: Full path to the filename
+    :returns: dict
+
+    """
+    try:
+        with file(config_file, 'r') as handle:
+            config = yaml.load(handle)
+
+    except IOError:
+        sys.stderr.write('Configuration file not found "%s"\n' % config_file)
+        sys.exit(1)
+
+    except yaml.scanner.ScannerError as err:
+        sys.stderr.write('Invalid configuration file "%s":\n%s\n' %\
+                         (config_file, err))
+        sys.exit(1)
+
+    return config

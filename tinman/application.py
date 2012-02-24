@@ -38,7 +38,7 @@ class TinmanApplication(web.Application):
     def __init__(self, routes=None, **settings):
 
         # Define our logger
-        self._logger = logging.getLogger('tinman.application')
+        self._logger = logging.getLogger(__name__)
 
         # Assign the settings
         self._settings = settings
@@ -49,6 +49,9 @@ class TinmanApplication(web.Application):
 
         # Create a TinmanAttributes for assignments to application scope
         self.tinman = TinmanAttributes()
+
+        # A handle for a HTTP Port we may want to use when logging
+        self.port = None
 
         # Prepare the routes
         prepared_routes = self._prepare_routes(routes)
@@ -73,8 +76,8 @@ class TinmanApplication(web.Application):
         self._prepare_uimodules()
 
         # Create our Application for this process
-        web.Application.__init__(self, prepared_routes, **self._settings)
-
+        super(TinmanApplication, self).__init__(prepared_routes,
+                                                **self._settings)
 
     def _prepare_paths(self):
         """Setup and override the settings values for given paths by finding the
@@ -176,7 +179,7 @@ class TinmanApplication(web.Application):
             if len(attributes) == 3:
                 kwargs = attributes[2]
 
-        logging.debug("Initializing route: %s with %s", route, module)
+        self._logger.debug("Initializing route: %s with %s", route, module)
 
         # Return the reference to the python class at the end of the
         # namespace. eg foo.Baz, foo.bar.Baz
@@ -261,6 +264,27 @@ class TinmanApplication(web.Application):
         """Setup the application version"""
         if 'version' not in self._settings:
             self._settings['version'] = __version__
+
+    def log_request(self, handler):
+        """Writes a completed HTTP request to the logs.
+
+        By default writes to the tinman.application logger.  To change
+        this behavior either subclass Application and override this method,
+        or pass a function in the application settings dictionary as
+        'log_function'.
+        """
+        if "log_function" in self.settings:
+            self.settings["log_function"](handler)
+            return
+        if handler.get_status() < 400:
+            log_method = self._logger.info
+        elif handler.get_status() < 500:
+            log_method = self._logger.warning
+        else:
+            log_method = self._logger.error
+        request_time = 1000.0 * handler.request.request_time()
+        log_method("%d %s %.2fms", handler.get_status(),
+                   handler._request_summary(), request_time)
 
 
 class TinmanAttributes(object):

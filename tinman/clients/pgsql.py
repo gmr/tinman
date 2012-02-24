@@ -17,7 +17,7 @@ from psycopg2 import extensions
 from psycopg2 import extras
 
 _CONNECTIONS = None
-_LOGGER = logging.getLogger('tinman.clients.pgsql')
+_LOGGER = logging.getLogger(__name__)
 
 
 def _add_cached_connection(connection_hash, connection):

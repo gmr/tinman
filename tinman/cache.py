@@ -17,10 +17,10 @@ def memoize_write(*args):
 
     # Append the value if the key exists, otherwise just set it
     if args[0].tinman_memoize_key in local_cache:
-        debug('memoize append: %s' % key)
+        debug('memoize append: %s' % args[0].tinman_memoize_key)
         local_cache[args[0].tinman_memoize_key] += args[1]
     else:
-        debug('memoize set: %s' % key)
+        debug('memoize set: %s' % args[0].tinman_memoize_key)
         local_cache[args[0].tinman_memoize_key] = args[1]
 
     # Call the monkey patched RequestHandler.write

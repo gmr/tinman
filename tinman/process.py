@@ -100,7 +100,7 @@ class TinmanProcess(object):
         # Add it to our tinman attribute at the application scope
         self._app.tinman.add('rabbitmq', rabbitmq)
 
-    def _build_redis_connection(self, config):
+    def _build_redis_connection(self):
         """Create a connection to Redis if we have it configured in our
         configuration file.
 

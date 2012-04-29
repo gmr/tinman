@@ -22,8 +22,10 @@ Logging:
     tinman: tinman
     myapp: myapp.handlers
   formatters:
-    verbose: "%(levelname) -10s %(asctime)s %(name) -30s %(funcName) -25s: %(message)s"
-    syslog: "%(levelname)s <PID %(process)d:%(processName)s> %(name).%(funcName)s: %(message)s"
+    verbose:
+      format: "%(levelname) -10s %(asctime)s %(name) -30s %(funcName) -25s: %(message)s"
+    syslog:
+      format: "%(levelname)s <PID %(process)d:%(processName)s> %(name).%(funcName)s: %(message)s"
   handlers:
     console:
       class: logging.StreamHandler

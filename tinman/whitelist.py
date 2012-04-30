@@ -1,15 +1,15 @@
 """
 Tinman Whitelist Module
+
 """
 __author__ = "Gavin M. Roy"
 __email__ = "gmr@myyearbook.com"
 __date__ = "2011-03-13"
-__version__ = 0.1
 
-from functools import wraps
 from ipaddr import IPv4Network, IPv4Address
 from tornado.web import HTTPError
 from types import FunctionType
+
 
 def whitelisted(argument=None):
     """

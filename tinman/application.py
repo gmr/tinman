@@ -23,7 +23,7 @@ def _replace_value(original, key, value):
     :type key: str
     :param value: The string value to replace it with
     :type value: str
-    :returns: str
+    :rtype: str
 
     """
     return original.replace(key, value)
@@ -156,7 +156,7 @@ class TinmanApplication(web.Application):
 
         :param attributes: Route attributes
         :type attributes: list or tuple
-        :returns: list of prepared route
+        :rtype: list of prepared route
         """
         # Validate it's a list or set
         if type(attributes) not in (list, tuple):
@@ -206,7 +206,7 @@ class TinmanApplication(web.Application):
 
         :param routes: Routes to prepare
         :type routes: list
-        :returns: list
+        :rtype: list
         :raises: ValueError
 
         """

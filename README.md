@@ -16,6 +16,7 @@ decorators and utilities.
   setting logging levels for individual packages.
 
 ## Requirements
+- clihelper
 - ipaddr
 - pyyaml
 
@@ -100,21 +101,14 @@ Configure the tornado.httpserver.HTTPServer with the following options:
 - xheaders: Enable X-Header support in tornado.httpserver.HTTPServer
 
 #### Logging Options
-Enable standard python logging with the following options:
+Logging uses the dictConfig format as specified at
 
-- directory: Optional log file output directory
-- filename: Optional filename, not needed for syslog
-- format: Logging output format
-- level: One of debug, error, warning, info
-- handler: Optional handler
-- syslog: If handler == syslog, parameters for syslog
-    - address: Syslog address
-    - facility: Syslog facility
+  http://docs.python.org/library/logging.config.html#dictionary-schema-details
 
 #### Route List
 The route list is specified using the top-level Routes keyword. Routes consist
 of a list of individual route items that may consist of mulitiple items in a route
-tuple
+tuple.
 
 ##### Traditional Route Tuples
 The traditional route tuple, as expected by Tornado is a two or three item tuple
@@ -147,6 +141,10 @@ The following is an example tinman application configuration:
 
     %YAML 1.2
     ---
+    user: www-data
+    group: www-data
+    pidfile: /var/run/tinman/tinman.pid
+
     Application:
         base_path: /home/foo/mywebsite
         debug: True
@@ -164,8 +162,10 @@ The following is an example tinman application configuration:
         pika: pika
         myapp: myapp.handlers
       formatters:
-        verbose: "%(levelname) -10s %(asctime)s %(funcName) -25s: %(message)s"
-        syslog: "%(levelname)s <PID %(process)d:%(processName)s> %(message)s"
+        verbose:
+          format: "%(levelname) -10s %(asctime)s %(funcName) -25s: %(message)s"
+        syslog:
+          format: "%(levelname)s <PID %(process)d:%(processName)s> %(message)s"
       handlers:
         console:
           class: logging.StreamHandler

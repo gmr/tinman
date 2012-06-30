@@ -25,6 +25,11 @@ decorators and utilities.
 - pika >= v0.9.5
 - psycopg2 >= 2.4.2
 
+## Unit tests
+Tests are written to be run with nose and mock. They can be run with
+
+    python setup.py nosetests
+
 ## Application Runner
 The tinman application runner works off a YAML configuration file format and
 provides a convenient interface for running tornado applications interactively

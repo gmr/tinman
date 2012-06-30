@@ -4,4 +4,6 @@
 build
 dist
 *egg-info
-log.txt
+.coverage
+logs
+atlassian-ide-plugin.xml

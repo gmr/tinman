@@ -58,9 +58,9 @@ The following are the keys that are available to be used for your Tinman/Tornado
 - login_url: Login URL when using Tornado's @authenticated decorator
 - static_path: The path to static files
 - template_loader: The python module.Class to override the default template loader with
-- template_path: The path to template files
+- templates_path: The path to template files
 - transforms: A list of transformation objects to add to the application in module.Class format
-- translation_path: The path to translation files
+- translations_path: The path to translation files
 - ui_modules: Module for the UI modules classes (ie mysite.modules)
 - xsrf_cookies: Enable xsrf_cookie mode for forms
 - whitelist: List of IP addresses in CIDR notation if whitelist decorator is to be used
@@ -78,16 +78,16 @@ You can install your site as a non-zip safe python package and use:
         Application:
             package_name: mywebsite
             static_path: __package_path__/static
-            template_path: __package_path__/templates
-            translation_path: __package_path__/translations
+            templates_path: __package_path__/templates
+            translations_path: __package_path__/translations
 
 Or you could specify a base_path:
 
         Application:
             base_path: /home/foo/mywebsite
             static_path: __base_path__/static
-            template_path: __base_path__/templates
-            translation_path: __base_path__/translations
+            templates_path: __base_path__/templates
+            translations_path: __base_path__/translations
 
 If you are not going to install your app as a python package, you should set a
 base_path so that tinman knows what directory to insert into the Python path to

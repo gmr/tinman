@@ -1,32 +1,17 @@
 """
 Main Tinman Application Class
-"""
-__author__ = 'gmr'
-__since__ = '2011-06-06'
 
+"""
 import logging
 from os import path
 import sys
 from tornado import web
 
 # Import our version number
-from . import utils
-from . import __version__
+from tinman import utils
+from tinman import __version__
 
-
-def _replace_value(original, key, value):
-    """Replace the string value key with value in original
-
-    :param original: Original string
-    :type original: str
-    :param key: The string to replace in original string
-    :type key: str
-    :param value: The string value to replace it with
-    :type value: str
-    :rtype: str
-
-    """
-    return original.replace(key, value)
+logger = logging.getLogger(__name__)
 
 
 class TinmanApplication(web.Application):
@@ -34,17 +19,19 @@ class TinmanApplication(web.Application):
     for you that you'd have to handle yourself.
 
     """
-
     def __init__(self, routes=None, **settings):
+        """Create a new TinmanApplication instance with the specified Routes and
+        settings.
 
-        # Define our logger
-        self._logger = logging.getLogger(__name__)
+        :param list routes: A list of route tuples
+        :param dict settings: Application settings
 
+        """
         # Assign the settings
         self._settings = settings
 
         # If we have a base path, add it to our sys path
-        if settings.get('base_path'):
+        if 'base_path' in settings:
             sys.path.insert(0, settings['base_path'])
 
         # Create a TinmanAttributes for assignments to application scope
@@ -53,23 +40,20 @@ class TinmanApplication(web.Application):
         # A handle for a HTTP Port we may want to use when logging
         self.port = None
 
-        # Prepare the routes
-        prepared_routes = self._prepare_routes(routes)
-
         # Prepare the paths
         self._prepare_paths()
 
-        # If a translation path is specified, load the translations
-        if 'translation_path' in self._settings:
-            self._logger.info('Loading translations from %s',
-                              self._settings['translation_path'])
-            from tornado import locale
-            locale.load_translations(self._settings['translation_path'])
+        # If a translation paths is specified, load the translations
+        if 'translations_path' in self._settings:
+            self._load_translations(self._settings['translations_path'])
 
         # Set the app version from the version setting in this file
         self._prepare_version()
 
-        # Setup the UI modules
+        # Prepare the routes
+        prepared_routes = self._prepare_routes(routes)
+
+        # Setup the transforms
         self._prepare_transforms()
 
         # Setup the UI modules
@@ -79,6 +63,16 @@ class TinmanApplication(web.Application):
         super(TinmanApplication, self).__init__(prepared_routes,
                                                 **self._settings)
 
+    def _load_translations(self, path):
+        """Load the translations from the specified path.
+
+        :param str path: The path to the translations
+
+        """
+        logger.info('Loading translations from %s', path)
+        from tornado import locale
+        locale.load_translations(path)
+
     def _prepare_paths(self):
         """Setup and override the settings values for given paths by finding the
         locations of base_path if set, package location if set, etc.
@@ -86,7 +80,7 @@ class TinmanApplication(web.Application):
         :raises: ValueError
 
         """
-        self._logger.debug('Preparing paths')
+        logger.debug('Preparing paths')
         # Try and load a package if specified
         package_path = None
         if 'package_name' in self._settings:
@@ -95,7 +89,7 @@ class TinmanApplication(web.Application):
                 package = __import__(self._settings['package_name'],
                                      globals(), locals())
             except ImportError as error:
-                self._logger.error('Could not import package %s in config: %s',
+                logger.error('Could not import package %s in config: %s',
                                    self._settings['package_name'], error)
             if package:
                 package_path = path.abspath(path.dirname(package.__file__))
@@ -123,21 +117,21 @@ class TinmanApplication(web.Application):
                 if self._settings[path_name].find(variable) > -1:
                     raise ValueError('%s called for but not set', variable)
 
-    def _replace_path(self, path_name, key, value):
-        """Replace the key with the value for the given path_name name.
+    def _replace_path(self, path_name, name, value):
+        """Replace the name with the value for the given path_name name.
 
         :param path_name: The path_name name
         :type path_name: str
-        :param key: The string to replace in original string
-        :type key: str
-        :param value: The string value replacement value for key
+        :param name: The string to replace in original string
+        :type name: str
+        :param value: The string value replacement value for name
         :type value: str
 
         """
         # If we have a base path_name, replace it if needed
         if self._settings[path_name]:
-            self._settings[path_name] = \
-                _replace_value(self._settings[path_name], key, value)
+            self._settings[path_name] = self._settings[path_name].replace(name,
+                                                                          value)
 
     def _set_path(self, path_name, path_value):
         """Set the specified path setting with the given value
@@ -160,7 +154,7 @@ class TinmanApplication(web.Application):
         """
         # Validate it's a list or set
         if type(attributes) not in (list, tuple):
-            self._logger.error("Invalid route, must be a list or tuple: %r",
+            logger.error("Invalid route, must be a list or tuple: %r",
                                attributes)
             return False
 
@@ -179,14 +173,14 @@ class TinmanApplication(web.Application):
             if len(attributes) == 3:
                 kwargs = attributes[2]
 
-        self._logger.debug("Initializing route: %s with %s", route, module)
+        logger.debug("Initializing route: %s with %s", route, module)
 
         # Return the reference to the python class at the end of the
         # namespace. eg foo.Baz, foo.bar.Baz
         try:
             handler = utils.import_namespaced_class(module)
         except ImportError as error:
-            self._logger.error("Module import error for %s: %r",
+            logger.error("Module import error for %s: %r",
                                module, error)
             return None
 
@@ -212,7 +206,7 @@ class TinmanApplication(web.Application):
         """
         if not isinstance(routes, list):
             raise ValueError("Routes parameter must be a list of tuples")
-        self._logger.debug('Preparing routes')
+        logger.debug('Preparing routes')
 
         # Our prepared_routes is what we pass in to Tornado
         prepared_routes = list()
@@ -224,10 +218,10 @@ class TinmanApplication(web.Application):
             route = self._prepare_route(parts)
             if route:
                # Append our prepared_routes list
-                self._logger.info('Appending handler: %r', route)
+                logger.info('Appending handler: %r', route)
                 prepared_routes.append(route)
             else:
-                self._logger.warn('Skipping route %r due to prepare error',
+                logger.warn('Skipping route %r due to prepare error',
                                   parts)
 
         # Return the routes we prepared
@@ -236,7 +230,7 @@ class TinmanApplication(web.Application):
     def _prepare_transforms(self):
         """Prepare the UI Modules object"""
         if 'transforms' in self._settings:
-            self._logger.info('Preparing %i transform class(es) for import',
+            logger.info('Preparing %i transform class(es) for import',
                               len(self._settings['transforms']))
             transforms = list()
             for transform in self._settings['transforms']:
@@ -244,20 +238,20 @@ class TinmanApplication(web.Application):
                     # Assign the modules to the import
                     transforms.append(utils.import_namespaced_class(transform))
                 except ImportError as error:
-                    self._logger.error("Error importing UI Modules %s: %s",
+                    logger.error("Error importing UI Modules %s: %s",
                                        self._settings['ui_modules'], error)
             self._settings['transforms'] = transforms
 
     def _prepare_uimodules(self):
         """Prepare the UI Modules object"""
         if 'ui_modules' in self._settings:
-            self._logger.debug('Preparing uimodules for import')
+            logger.debug('Preparing uimodules for import')
             try:
                 # Assign the modules to the import
                 self._settings['ui_modules'] = \
                     utils.import_namespaced_class(self._settings['ui_modules'])
             except ImportError as error:
-                self._logger.error("Error importing UI Modules %s: %s",
+                logger.error("Error importing UI Modules %s: %s",
                                    self._settings['ui_modules'], error)
 
     def _prepare_version(self):
@@ -277,11 +271,11 @@ class TinmanApplication(web.Application):
             self.settings["log_function"](handler)
             return
         if handler.get_status() < 400:
-            log_method = self._logger.info
+            log_method = logger.info
         elif handler.get_status() < 500:
-            log_method = self._logger.warning
+            log_method = logger.warning
         else:
-            log_method = self._logger.error
+            log_method = logger.error
         request_time = 1000.0 * handler.request.request_time()
         log_method("%d %s %.2fms", handler.get_status(),
                    handler._request_summary(), request_time)
@@ -292,17 +286,36 @@ class TinmanAttributes(object):
     can be used across connections.
 
     """
+    def __init__(self):
+        self._attributes = dict()
+
+    def __contains__(self, value):
+        logger.debug('Running %s against %r', value, self._attributes)
+        return value in self._attributes.keys()
+
+    def __delattr__(self, name):
+        if name not in self._attributes:
+            raise AttributeError('%s is not set' % name)
+        del self._attributes[name]
+
+    def __getattr__(self, item):
+        if item == '_attributes':
+            super(TinmanAttributes, self).__getattr__(item)
+        return self._attributes[item]
+
+    def __setattr__(self, name, value):
+        if name == '_attributes':
+            super(TinmanAttributes, self).__setattr__(name, value)
+        self._attributes[name] = value
 
     def add(self, name, value):
         """Add an attribute value to our object instance.
 
-        :param name: Connection attribute name
-        :type name: str
-        :param value: Value to associate with the attribute
-        :type value: any
+        :param str name: Connection attribute name
+        :param any value: Value to associate with the attribute
         :raises: AttributeError
-        """
 
+        """
         if hasattr(self, name):
             raise AttributeError('%s already exists' % name)
 
@@ -311,12 +324,10 @@ class TinmanAttributes(object):
     def remove(self, name):
         """Remove an attribute value to our object instance.
 
-        :param name: Connection attribute name
-        :type name: str
+        :param str name: Connection attribute name
         :raises: AttributeError
+
         """
-
-        if hasattr(self, name):
-            raise AttributeError('%s already exists' % name)
-
+        if not hasattr(self, name):
+            raise AttributeError('%s does not exist' % name)
         delattr(self, name)

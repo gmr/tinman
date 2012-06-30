@@ -120,26 +120,21 @@ class TinmanApplication(web.Application):
     def _replace_path(self, path_name, name, value):
         """Replace the name with the value for the given path_name name.
 
-        :param path_name: The path_name name
-        :type path_name: str
-        :param name: The string to replace in original string
-        :type name: str
-        :param value: The string value replacement value for name
-        :type value: str
+        :param str path_name: The path_name name
+        :param str name: The string to replace in original string
+        :param str value: The string value replacement value for name
 
         """
         # If we have a base path_name, replace it if needed
-        if self._settings[path_name]:
+        if path_name in self._settings:
             self._settings[path_name] = self._settings[path_name].replace(name,
                                                                           value)
 
     def _set_path(self, path_name, path_value):
         """Set the specified path setting with the given value
 
-        :param path_name: The path to set
-        :type path_name: str
-        :param path_value: Path to set it to
-        :type path_value: str
+        :param str path_name: The path to set
+        :param str path_value: Path to set it to
 
         """
         self._settings[path_name] = path_value
@@ -148,9 +143,9 @@ class TinmanApplication(web.Application):
         """Take a given inbound list for a route and parse it creating the
         route and importing the class it belongs to.
 
-        :param attributes: Route attributes
-        :type attributes: list or tuple
-        :rtype: list of prepared route
+        :param list attributes: Route attributes
+        :rtype: list
+
         """
         # Validate it's a list or set
         if type(attributes) not in (list, tuple):

@@ -13,22 +13,14 @@ from tinman import application
 class ApplicationTests(unittest.TestCase):
 
     def setUp(self):
-
         self._mock_obj = mock.Mock(spec=application.TinmanApplication)
 
-
     def test_load_translations(self):
-
         with mock.patch('tornado.locale.load_translations') as mock_load:
-
-
             path = '/foo'
-            print application.TinmanApplication._load_translations(self._mock_obj, path)
+            application.TinmanApplication._load_translations(self._mock_obj,
+                                                             path)
             mock_load.assert_called_once_with(path)
-
-
-
-
 
 
 class AttributeTests(unittest.TestCase):

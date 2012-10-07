@@ -1,6 +1,7 @@
 %YAML 1.2
 ---
 Application:
+  cookie_secret: fc360bf9-979d-4de6-b97c-aff68e856191
   debug: true
   session:
     adapter:

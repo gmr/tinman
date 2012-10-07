@@ -105,7 +105,7 @@ class SessionRequestHandler(web.RequestHandler):
         :rtype: dict
 
         """
-        return self.application.settings.get_document('session') or dict()
+        return self.application.settings.get('session') or dict()
 
     def _set_session_cookie(self):
         """Set the session data cookie."""
@@ -122,8 +122,8 @@ class SessionRequestHandler(web.RequestHandler):
         :rtype: tinman.session.SessionAdapter
 
         """
-        return session.get_session_adapter(self._session_adapter_settings,
-                                           self._get_session_id(),
+        return session.get_session_adapter(self._get_session_id(),
+                                           self._session_adapter_settings,
                                            self._session_duration)
 
     def prepare(self):

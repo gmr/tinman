@@ -2,3 +2,4 @@
 application development.
 
 """
+from tinman.handlers.session import SessionRequestHandler

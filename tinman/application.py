@@ -51,6 +51,7 @@ class TinmanApplication(web.Application):
         self._prepare_version()
 
         # Prepare the routes
+        logger.debug('Routes: %r', routes)
         prepared_routes = self._prepare_routes(routes)
 
         # Setup the transforms

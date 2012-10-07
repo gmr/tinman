@@ -44,14 +44,13 @@ class TinmanProcess(multiprocessing.Process):
         # Fixup the configuration parameters
         self._fixup_configuration(self._config)
 
-    def _application(self, config):
+    def _create_application(self):
         """Create and return a new instance of tornado.web.Application
 
-        :param dict config: The application configuration
-
         """
-        logging.debug('Creating a new Application with %r', config)
-        return application.TinmanApplication(self._get_routes(), **config)
+        logging.debug('Creating a new Application instance')
+        return application.TinmanApplication(self._get_routes(),
+                                             **self._get_application_config())
 
     def _fixup_configuration(self, config):
         """Rewrite the SSL certreqs option if it exists, do this once instead
@@ -92,49 +91,6 @@ class TinmanProcess(multiprocessing.Process):
         """
         return self._config['Application']
 
-    def _get_handlers(self):
-        """Return the dictionary of URI to Handler mappings, providing
-        instances of the handlers instead of the classes.
-
-        :rtype: dict
-
-        """
-        routes = self._get_routes_config()
-
-
-
-    def _get_http_server_config(self):
-        """Return the HTTPServer configuration
-
-        :rtype: dict
-
-        """
-        return self._config['HTTPServer']
-
-    def _get_postgres_config(self):
-        """Return the PostgreSQL configuration if it exists
-
-        :rtype: dict
-
-        """
-        return self._config.get('PostgreSQL')
-
-    def _get_rabbitmq_config(self):
-        """Return the RabbitMQ configuration if it exists
-
-        :rtype: dict
-
-        """
-        return self._config.get('RabbitMQ')
-
-    def _get_redis_config(self):
-        """Return the RabbitMQ configuration if it exists
-
-        :rtype: dict
-
-        """
-        return self._config.get('RabbitMQ')
-
     def _get_routes(self):
         """Return the route list from the configuration.
 
@@ -143,17 +99,16 @@ class TinmanProcess(multiprocessing.Process):
         """
         return self._config['Routes']
 
-    def _http_server(self, config):
+    def _create_http_server(self):
         """Setup the HTTPServer
 
         :rtype: tornado.httpserver.HTTPServer
 
         """
-        logger.debug('Returning a HTTPServer with %r', config)
-        return self._start_httpserver(self._port,
-                                      self._http_server_arguments(config))
+        return self._start_httpserver(self._port, self._http_server_arguments)
 
-    def _http_server_arguments(self, config):
+    @property
+    def _http_server_arguments(self):
         """Return a dictionary of HTTPServer arguments using the default values
         as specified in the HTTPServer class docstrings if no values are
         specified.
@@ -162,16 +117,10 @@ class TinmanProcess(multiprocessing.Process):
         :rtype: dict
 
         """
+        config = self._config['HTTPServer']
         return {'no_keep_alive': config.get('no_keep_alive', False),
                 'ssl_options': config.get('ssl_options'),
                 'xheaders': config.get('xheaders', False)}
-
-    def _setup_services(self):
-        """Create an instance for each of the configured auto-configured
-        services.
-
-        """
-
 
     def _setup_signal_handlers(self):
         """Called when a child process is spawned to register the signal
@@ -180,61 +129,6 @@ class TinmanProcess(multiprocessing.Process):
         """
         logger.debug('Registering signal handlers')
         signal.signal(signal.SIGTERM, self.on_sigterm)
-
-    def _setup_postgresql(self):
-        """If a PostgreSQL instance is configured, create a new PostgreSQL
-        connection and cursor.
-
-        """
-        config = self._get_postgres_config()
-        if not config:
-            return None
-
-        logger.debug('Constructing PostgreSQL Connection')
-        from tinman.clients import pgsql
-
-        return pgsql.PgSQL(config.get('host'),
-                           config.get('port'),
-                           config.get('dbname'),
-                           config.get('user'),
-                           config.get('password'))
-
-    def _setup_rabbitmq_connection(self):
-        """Create a connection to RabbitMQ if we have it configured in our
-        configuration file.
-
-        """
-        config = self._get_redis_config()
-        if not config:
-            return None
-
-        # Import RabbitMQ only if we need it
-        from clients import rabbitmq
-
-        # Create the connected RabbitMQ instance
-        return rabbitmq.RabbitMQ(config.get('host'),
-                                 config.get('port'),
-                                 config.get('virtual_host'),
-                                 config.get('username'),
-                                 config.get('password'))
-
-    def _setup_redis_connection(self):
-        """Create a connection to Redis if we have it configured in our
-        configuration file.
-
-        """
-        config = self._get_redis_config()
-        if not config:
-            return None
-
-        # Import Redis only if we need it
-        from clients import redis
-
-        # Create our Redis instance, it will auto-connect and setup
-        return redis.Redis(config.get('host'),
-                           config.get('port'),
-                           config.get('db'),
-                           config.get('password'))
 
     def _start_httpserver(self, port, args):
         """Start the HTTPServer
@@ -245,10 +139,9 @@ class TinmanProcess(multiprocessing.Process):
 
         """
         # Start the HTTP Server
-        logger.info("Starting Tornado v%s HTTPServer on port %i",
-                    tornado_version, port)
-        http_server = httpserver.HTTPServer(self._application,
-                                            **args)
+        logger.info("Starting Tornado v%s HTTPServer on port %i Args: %r",
+                    tornado_version, port, args)
+        http_server = httpserver.HTTPServer(self._app, **args)
         try:
             http_server.listen(port)
         except socket.error as error:
@@ -259,7 +152,6 @@ class TinmanProcess(multiprocessing.Process):
 
         # Patch in the HTTP Port for Logging
         self._app.http_port = port
-
         return http_server
 
     def on_sigterm(self, signal, frame):
@@ -283,13 +175,10 @@ class TinmanProcess(multiprocessing.Process):
         self._setup_signal_handlers()
 
         # Create the application instance
-        self._app = self._application(self._get_application_config())
-
-        # Setup the auto-created IO services
-        self._setup_services()
+        self._app = self._create_application()
 
         # Create the HTTPServer
-        self._server = self._http_server(self._get_http_server_config())
+        self._server = self._create_http_server()
 
         # Hold on to the IOLoop in case it's needed for responding to signals
         self._ioloop = ioloop.IOLoop.instance()

@@ -88,7 +88,7 @@ class TinmanController(clihelper.Controller):
         """
         base_path = self._get_application_config().get('base_path')
         if base_path:
-            logger.debug('Appending %s to the sys.path list')
+            logger.debug('Appending %s to the sys.path list', base_path)
             sys.path.insert(0, base_path)
 
     def _process(self):

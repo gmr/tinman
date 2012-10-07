@@ -2,6 +2,12 @@
 ---
 Application:
   debug: true
+  session:
+    adapter:
+      class: FileSessionHandler
+    cookie:
+      name: session
+    duration: 3600
   stats_port: 9090
   xsrf_cookies: false
   wake_interval: 60
@@ -15,7 +21,7 @@ Daemon:
 
 HTTPServer:
   no_keep_alive: false
-  ports: [8000]
+  ports: [8000, 8001, 8002]
   xheaders: true
 
 Logging:
@@ -82,17 +88,6 @@ Logging:
   disable_existing_loggers: True
 
 
-RabbitMQ:
-  host: localhost
-  port: 5672
-  username: guest
-  password: guest
-  virtual_host: /
-
 Routes:
-  - [/, test.example.Home]
-  - [re, '/(c[a-f0-9]f[a-f0-9]{1,3}-[a-f0-9]{8}).gif', test.example.Pixel]
-  -
-    - .*
-    - tornado.web.RedirectHandler
-    - url: http://www.github.com
+  - [/, tinman.example.DefaultHandler]
+  - ['/test.gif', tinman.example.DefaultHandler]

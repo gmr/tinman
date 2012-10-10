@@ -341,139 +341,33 @@ Registers the shutdown function on SIGTERM and registers a rehash handler
 on SIGHUP. To specify the rehash handler, assign a callback to
 tinman.utils.rehash_handler.
 
-### Auto-Setup of Services
-In order to facilitate a quick development process, the tinman application now
-has the concept of auto-setup and connect services. Initially, RabbitMQ is the
-only connectivity that is supported (via the Pika library). It is intended to
-add support for all major service types that have asynchronous support for the
-Tornado IO loop.
 
-### PostgreSQL
- To setup an automatic connection to PostgreSQL simply include a Postgres section
- in your configuration file:
+### Redis Handler
 
-     Postgres:
-         host: localhost
-         port: 5432
-         dbname: postgres
-         user: postgres
+The redis handler adds built-in support for Redis using the tornado-redis library.
 
- *NOTE* Currently this support is not asynchronous
+#### Example Configuration Snippet
 
- When the application is constructed, it will connect to PostgreSQL and assign
- the connection to a standard object called tinman which is an attribute of the
- application. The connection will automatically be setup to use the autocommit
- isolation level.
-
- We construct a copy of a tinman specific object using the tinman.clients.pgsql.PgSQL
- class. This class attempts to cache connections to PostgreSQL at the module level,
- reducing the amount of connection/disconnects needed. This object is accessed
- from a request handler as:
-
-    self.application.tinman.pgsql
-
- To get a cursor, simply use the cursor attribute of the PgSQL object. This will
- return a psycopg2.extras.DictCursor object.
-
-#### Example
-
-    class MyRequestHandler(web.RequestHandler):
-        def get(self, *args, **kwargs):
-            cursor = self.application.tinman.pgsql.cursor
-            cursor.execute('SELECT * FROM my_table;')
-            data = cursor.fetchall()
-            self.render('my-template.html', data=data)
-
-
-### RabbitMQ
-To setup an automatic connection to RabbitMQ simply include a RabbitMQ section
-in your configuration file:
-
-    RabbitMQ:
-        host: localhost
-        port: 5672
-        username: guest
-        password: guest
-        virtual_host: /
-
-When the application is constructed, it will connect to RabbitMQ and assign
-the connection and channel to a standard object called tinman which is an
-attribute of the application.
-
-We construct a copy of a tinman specific object using the tinman.clients.rabbitmq.RabbitMQ
-class. Currently this is only setup to publish messages, though it is the intent
-to add the ability to consume messages asychronously as well. This object is
-accessed from a request handler as: self.application.tinman.rabbitmq
-
-For publishing messages, only one command is required: RabbitMQ.publish_message
-
-If you pass in a dictionary or list, the message will be auto-JSON encoded
-and the mimetype will be set as application/json.
-
-#### Parameters
-- exchange: RabbitMQ exchange to publish to
-- routing_key: RabbitMQ routing key to use in publishing message
-- message: The message itself to send
-- mimetype: The mimetype of the message (default: text/plain)
-- mandatory: AMQP Basic.Publish mandatory field
-- immediate: AMQP Basic.Publish immediate field
-
-#### Returns
-    None
-
-#### Example
-    self.application.tinman.rabbitmq.publish_message(self._exchange,
-                                                     routing_key,
-                                                     event)
-
-### Redis
-To setup an automatic connection to Redis siply include a Redis section in your
-configuration file:
-
-    Redis:
+    Application:
+      redis:
         host: localhost
         port: 6379
         db: 0
-        password: foo
 
-When the application is constructed, it will connect to Redis and assign
-the connection and channel to a standard object called tinman which is an
-attribute of the application.
+#### Example Code Example
 
-We construct a copy of a tinman specific object using the tinman.clients.redis.Redis
-class. This object is accessed from a request handler as self.application.tinman.redis
-
-This class requires the asynchronous brukva client from https://github.com/evilkost/brukva
-
-#### Example
+    import datetime
+    from tinman.handlers import redis
     from tornado import web
 
-    class RedisTest(web.RequestHandler):
-
-        def initialize(self):
-            # Set a more handy redis handle
-            self.redis = self.application.tinman.redis.client
+    class DefaultHandler(redis.RedisRequestHandler):
 
         @web.asynchronous
-        def get(self, key):
-
-            # Make an asynchronous redis request
-            self.redis.get(key, self.on_redis_response)
-
-        def on_redis_response(self, response):
-            """Since we're fully async here, when redis comes back with our response
-            we'll process it in this function.
-
-            """
-            # If we could not find the response code
-            if not response:
-                self.send_error(404)
-
-            # Write the redis value out as a key/value pair in JSON
-            self.write({key: response})
-
-            # Done
+        def get(self, *args, **kwargs):
+            self._redis_set('last_request', datetime.datetime.now().isoformat())
+            self.set_status(204)
             self.finish()
+
 
 ### CouchDB Loader
 

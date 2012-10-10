@@ -379,9 +379,14 @@ class FileSessionAdapter(SessionAdapter):
             raise error
 
 
+
 def get_session_adapter(session_id, configuration, duration):
 
     if configuration.get('class') == 'FileSessionHandler':
         return FileSessionAdapter(session_id, configuration, duration)
+    elif configuration.get('class') == 'RedisSessionHandler':
+        from tinman.session import redis_adapter
+        return redis_adapter.RedisSessionAdapter(session_id,
+                                                 configuration, duration)
 
     raise exceptions.ConfigurationException('Session Adapter')

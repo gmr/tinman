@@ -5,10 +5,18 @@ Application:
   debug: true
   session:
     adapter:
-      class: FileSessionHandler
+      class: RedisSessionHandler
+      redis:
+        host: localhost
+        port: 6379
+        db: 0
     cookie:
       name: session
     duration: 3600
+  redis:
+    host: localhost
+    port: 6379
+    db: 0
   stats_port: 9090
   xsrf_cookies: false
   wake_interval: 60

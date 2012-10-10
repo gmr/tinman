@@ -141,10 +141,10 @@ setup(name='%(project)s',
         self._create_package_setup()
 
 
-def initialize_project():
+def main():
     initializer = Project()
     initializer.run()
 
 
 if __name__ == '__main__':
-    initialize_project()
+    main()

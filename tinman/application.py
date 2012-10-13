@@ -19,16 +19,17 @@ class TinmanApplication(web.Application):
     for you that you'd have to handle yourself.
 
     """
-    def __init__(self, routes=None, **settings):
+    def __init__(self, routes=None, port=None, **settings):
         """Create a new TinmanApplication instance with the specified Routes and
         settings.
 
         :param list routes: A list of route tuples
+        :param int port: The port number for the HTTP server
         :param dict settings: Application settings
 
         """
         # Assign the settings
-        self._settings = settings
+        self._settings = settings or dict()
 
         # If we have a base path, add it to our sys path
         if 'base_path' in settings:
@@ -38,7 +39,7 @@ class TinmanApplication(web.Application):
         self.tinman = TinmanAttributes()
 
         # A handle for a HTTP Port we may want to use when logging
-        self.port = None
+        self.port = port
 
         # Prepare the paths
         self._prepare_paths()

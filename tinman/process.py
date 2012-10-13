@@ -50,6 +50,7 @@ class TinmanProcess(multiprocessing.Process):
         """
         logging.debug('Creating a new Application instance')
         return application.TinmanApplication(self._get_routes(),
+                                             self._port,
                                              **self._get_application_config())
 
     def _fixup_configuration(self, config):
@@ -65,6 +66,9 @@ class TinmanProcess(multiprocessing.Process):
         # Set the debug to True if running in the foreground
         if self._debug and not config['Application'].get('debug'):
             config['Application']['debug'] = True
+
+        # Append the HTTP server ports for cross-process functionality
+        config['Application']['server_ports'] = config['HTTPServer']['ports']
 
     def _fixup_ssl_config(self, config):
         """Check the config to see if SSL configuration options have been passed

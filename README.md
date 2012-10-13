@@ -22,6 +22,11 @@ previous.
 - Flexible logging configuration allowing for custom formatters, filters handlers and
   setting logging levels for individual packages.
 
+## Installation
+Install via pip or easy_install:
+
+    pip install tinman
+
 ## Module Descriptions
 
 - tinman

@@ -1,34 +1,53 @@
 # Tinman
-Tinman is a take what you need package designed to speed development of
-Tornado applications.  It includes an application wrapper and a toolbox of
+Tinman adds a little more stack to Tornado. It is designed to speed development
+of Tornado applications. It includes an application wrapper and a toolbox of
 decorators and utilities.
+
+## 0.9+ Version Warning
+The configuration file syntax has changed and the structure of the package has
+changed. Please test your applications if you are upgrading from 0.4 or
+previous.
 
 ## Features
 - A full featured application wrapper
 - Standard configuration for applications
+- Built-in configurable session management
+- A command-line tool, tinman-init that will create a skeleton app structure
+  with the initial package and setup.py file.
 - RequestHandler output caching
 - Network address whitelisting decorator
 - Method/Function debug logging decorator
-- Automated connection setup for PostgreSQL, RabbitMQ and Redis
-  (memcached, mongodb, mysql planned)
+- Handlers with automated connection setup for PostgreSQL, RabbitMQ and Redis
 - Support for a External Template Loaders including Tinman's CouchDB Template Loader
 - Flexible logging configuration allowing for custom formatters, filters handlers and
   setting logging levels for individual packages.
 
+## Module Descriptions
+
+- tinman
+  - application: TinmanApplication extends tornado.web.Application, handling the autoloading of configuration for routes, logging, translations, etc.
+  - controller: Core tinman application controller.
+  - decorators: Authentication, memoization and whitelisting decorators.
+  - exceptions: Tinman specific exceptions
+  - handlers: Request handlers which may be used as the base handler or mix-ins.
+    - rabbitmq: A request handler that implements a pika connection for publishing, consuming or other interaction with RabbitMQ.
+    - redis: A request handler that uses tornado-redis for use with redis.
+    - session: A request handler with built-in session management.
+  - loaders: A library of custom template loaders, currently only CouchDB is supported.
+  - process: Invoked by the controller, each Tinman process is tied to a specific HTTP server port.
+  - session: Session adapters and serialization mixins
+  - utilities: Command line utilities
+
 ## Requirements
 - clihelper
 - ipaddr
+- python_daemon
 - pyyaml
 
 ## Optional Dependencies
-- brukva
 - pika >= v0.9.5
-- psycopg2 >= 2.4.2
-
-## Unit tests
-Tests are written to be run with nose and mock. They can be run with
-
-    python setup.py nosetests
+- psycopg2
+- tornado-redis
 
 ## Application Runner
 The tinman application runner works off a YAML configuration file format and
@@ -48,6 +67,42 @@ or as a daemon.
                                 Specify the configuration file for use
           -f, --foreground      Run interactively in console
 
+### Example Handlers
+
+#### Session
+Sessions will automatically load on prepare and save on finish. If you extend
+the SessionHandler and need to use prepare or finish, make sure to call
+super(YourClass, self).prepare() and super(YourClass, self).on_finish() in
+your extended methods. By using the session mixins you can change the default
+session behavior to use different types of storage backends and serializers.
+
+    from tinman.handlers import session
+    from tornado import web
+
+    class Handler(session.SessionHandler):
+
+      @web.asynchronous
+      def get(self, *args, **kwargs):
+
+          # Set a session attribute
+          self._session.username = 'foo'
+          self._session.your_variable = 'bar'
+
+          self.write({'session_id': self._session.id,
+                      'your_variable': self._session.your_variable})
+          self.finish()
+
+      def prepare(self):
+          super(Handler, self).on_finished()
+          # Do other stuff here
+
+      def prepare(self):
+          super(Handler, self).prepare()
+          # Do other stuff here
+
+
+
+
 ### Configuration
 
 #### Application Options
@@ -56,6 +111,23 @@ The following are the keys that are available to be used for your Tinman/Tornado
 - base_path: The root of the files for the application
 - cookie_secret: A salt for signing cookies when using secure cookies
 - login_url: Login URL when using Tornado's @authenticated decorator
+- redis: If using tinman.handlers.redis.RedisRequestHandler to auto-connect to redis.
+  - host: The redis server IP address
+  - port: The port number
+  - db: The database number
+- rabbitmq:
+  - host: the hostname
+  - port: the server port
+  - virtual_host: the virtual host
+  - username: the username
+  - password: the password
+- session: Configuration if using tinman.handlers.session.SessionRequestHandler
+  - adapter:
+    - class: The classname for the adapte,r one of FileSessionAdapter, RedisSessionAdapter
+    - configuration: SessionAdapter specific configuration
+  - cookie:
+    - name: The cookie name for the session ID
+  - duration: The duration in seconds for the session lifetime
 - static_path: The path to static files
 - template_loader: The python module.Class to override the default template loader with
 - templates_path: The path to template files
@@ -66,28 +138,9 @@ The following are the keys that are available to be used for your Tinman/Tornado
 - whitelist: List of IP addresses in CIDR notation if whitelist decorator is to be used
 
 ##### Notes
-When setting the template_path or static_path values in the configuration, you
-may use two variables to set the location for the values.  For example instead
-of setting something like:
-
-        Application:
-            static_path: /home/foo/mywebsite
-
-You can install your site as a non-zip safe python package and use:
-
-        Application:
-            package_name: mywebsite
-            static_path: __package_path__/static
-            templates_path: __package_path__/templates
-            translations_path: __package_path__/translations
-
-Or you could specify a base_path:
-
-        Application:
-            base_path: /home/foo/mywebsite
-            static_path: __base_path__/static
-            templates_path: __base_path__/templates
-            translations_path: __base_path__/translations
+The tinman-init script will create a skeleton Tinman directory structure for
+your project and create a setup.py that will put the static and template files
+in /usr/share/<project-name>.
 
 If you are not going to install your app as a python package, you should set a
 base_path so that tinman knows what directory to insert into the Python path to
@@ -146,85 +199,86 @@ The following is an example tinman application configuration:
 
     %YAML 1.2
     ---
-    user: www-data
-    group: www-data
-    pidfile: /var/run/tinman/tinman.pid
-
     Application:
-        base_path: /home/foo/mywebsite
-        debug: True
-        xsrf_cookies: False
-        # Any other vaidate Tornado application setting item
+      base_path: /home/foo/mywebsite
+      debug: True
+      xsrf_cookies: False
+      wake_interval: 60
+      # Any other vaidate Tornado application setting item
+
+    Daemon:
+      pidfile: /tmp/myapp.pid
+      user: www-data
+      group: www-data
 
     HTTPServer:
-        no_keep_alive: False
-        ports: [8000,8001]
-        xheaders: True
+      no_keep_alive: False
+      ports: [8000,8001]
+      xheaders: True
 
     Logging:
-      filters:
-        tinman: tinman
-        pika: pika
-        myapp: myapp.handlers
+      version: 1
       formatters:
         verbose:
-          format: "%(levelname) -10s %(asctime)s %(funcName) -25s: %(message)s"
+          format: '%(levelname) -10s %(asctime)s %(process)-6d %(processName) -20s %(name) -20s %(funcName) -25s: %(message)s'
+          datefmt: '%Y-%m-%d %H:%M:%S'
         syslog:
-          format: "%(levelname)s <PID %(process)d:%(processName)s> %(message)s"
+          format: ' %(levelname)s <PID %(process)d:%(processName)s> %(name)s.%(funcName)s(): %(message)s'
       handlers:
         console:
           class: logging.StreamHandler
-          formatter: verbose
-          level: DEBUG
           debug_only: True
-          filters:
-            - myapp
-            - tinman
+          formatter: verbose
+        error:
+          filename: /Users/gmr/Source/Tinman/logs/error.log
+          class: logging.handlers.RotatingFileHandler
+          maxBytes: 104857600
+          backupCount: 6
+          formatter: verbose
+        file:
+          filename: /Users/gmr/Source/Tinman/logs/tinman.log
+          class: logging.handlers.RotatingFileHandler
+          maxBytes: 104857600
+          backupCount: 6
+          formatter: verbose
         syslog:
           class: logging.handlers.SysLogHandler
           facility: local6
-          address: /dev/log
+          address: /var/run/syslog
           formatter: syslog
+      loggers:
+        clihelper:
+          handlers: [console]
+          level: DEBUG
+          propagate: True
+          formatter: verbose
+        tinman:
+          handlers: [console, file]
+          propagate: True
+          formatter: verbose
+          level: DEBUG
+        tornado:
+          handlers: [console, file]
+          propagate: True
+          formatter: verbose
           level: INFO
-          filters:
-            - myapp
-            - tinman
-            - pika
-        levels:
-          pika: INFO
-
-    # Automatically connect to PostgreSQL
-    Postgres:
-        host: localhost
-        port: 5432
-        dbname: postgres
-        user: postgres
-
-    # Automatically connect to RabbitMQ
-    RabbitMQ:
-        host: localhost
-        port: 5672
-        username: guest
-        password: guest
-        virtual_host: /
-
-    # Automatically connect to Redis
-    Redis:
-        host: localhost
-        port: 6379
-        db: 0
+      root:
+        handlers: [error]
+        formatter: verbose
+        level: ERROR
+      disable_existing_loggers: True
 
     Routes:
-         -[/, test.example.Home]
-         -
-            # /c1f1-7c5d9e0f.gif
-            - re
-            - /(c[a-f0-9]f[a-f0-9]{1,3}-[a-f0-9]{8}).gif
-            - test.example.Pixel
-         -
-            - .*
-            - tornado.web.RedirectHandler
-            - {"url": "http://www.github.com/gmr/tinman"}
+      -[/, test.example.Home]
+      -
+        # /c1f1-7c5d9e0f.gif
+        - re
+        - /(c[a-f0-9]f[a-f0-9]{1,3}-[a-f0-9]{8}).gif
+        - test.example.Pixel
+     -
+        - .*
+        - tornado.web.RedirectHandler
+        - {"url": "http://www.github.com/gmr/tinman"}
 
 ## Test Application
 The tinman application runner has a built in test application. To see if the
@@ -247,11 +301,15 @@ You should now be able to access a test webpage on port 8000. CTRL-C will exit.
 
 ## Decorators
 Tinman has decorators to make web development easier.
+
 ### tinman.whitelisted
 Vaidates the requesting IP address against a list of ip address blocks specified
 in Application.settings
 
 #### Example
+
+    from tinman.decorators import whitelist
+    from tornado import web
 
     # Define the whitelist as part of your application settings
     settings['whitelist'] = ['10.0.0.0/8',
@@ -262,118 +320,45 @@ in Application.settings
 
     # Specify the decorator in each method of your RequestHandler class
     # where you'd like to enforce the whitelist
-    class MyClass(tornado.web.RequestHandler):
+    class MyClass(web.RequestHandler):
 
-      @tinman.whitelisted
+      @whitelist.Whitelisted
       def get(self):
           self.write("IP was whitelisted")
 
 In addition you may add the whitelist right into the configuration file:
 
     Application:
-        whitelist:
-          - 10.0.0.0/8
-          - 192.168.1.0/24
-          - 1.2.3.4/32
+      whitelist:
+        - 10.0.0.0/8
+        - 192.168.1.0/24
+        - 1.2.3.4/32
 
-### tinman.memoize
+### tinman.decorators.memoize
 A local in-memory cache decorator. RequestHandler class method calls are cached
 by name and arguments. Note that this monkey-patches the RequestHandler class
 on execution and will cache the total output created including all of the
 template rendering if there is anything. Local cache can be flushed with
-_tinman.cache.flush()_
+_tinman.decorators.memoize.flush()
 
 #### Example
-    class MyClass(tornado.web.RequestHandler):
+
+    from tornado import web
+    from tinman.decorators import whitelist
+
+    class MyClass(web.RequestHandler):
 
        @tinman.memoize
        def get(self, content_id):
            self.write("Hello, World")
 
-### tinman.log_method_call
-Send a logging.debug message with the class, method and arguments called.
-
-#### Example
-    class MyClass(tornado.web.RequestHandler):
-
-        @tinman.log_method_call
-        def get(self, content_id):
-           self.write("Hello, World")
-
 ## Modules
-
-### utils
-A collection of helpful functions for starting, daemonizing and stopping a
-Tornado application.
-
-#### daemonize(pidfile=None, user=None, group=None)
-
-Daemonize the application specifying the PID in the pidfile if specified,
-setting the application to run as the user and group if specified.
-
-#### setup_logging(config, debug=False)
-
-Setup the logging module with the parameters specified in the config dictionary.
-If debug is specified as True, output will be to stdout using the Tornado
-colored output if available and all other logging methods such as file or syslog
-will be disabled.
-
-##### config dictionary format
-
-    directory:   Optional log file output directory
-    filename:    Optional filename, not needed for syslog
-    format:      Logging output format
-    level:       One of debug, error, warning, info
-    handler:     Optional handler
-    syslog:      If handler == syslog, parameters for syslog
-        address:   Syslog address
-        facility:  Syslog facility
-
-#### shutdown()
-
-Will call the stop() method of all child objects added to the
-tinman.utils.children list. This is useful for multi-processing apps to
-make sure that all children shutdown when a signal is called on the parent
-
-#### setup_signals()
-
-Registers the shutdown function on SIGTERM and registers a rehash handler
-on SIGHUP. To specify the rehash handler, assign a callback to
-tinman.utils.rehash_handler.
-
-
-### Redis Handler
-
-The redis handler adds built-in support for Redis using the tornado-redis library.
-
-#### Example Configuration Snippet
-
-    Application:
-      redis:
-        host: localhost
-        port: 6379
-        db: 0
-
-#### Example Code Example
-
-    import datetime
-    from tinman.handlers import redis
-    from tornado import web
-
-    class DefaultHandler(redis.RedisRequestHandler):
-
-        @web.asynchronous
-        def get(self, *args, **kwargs):
-            self._redis_set('last_request', datetime.datetime.now().isoformat())
-            self.set_status(204)
-            self.finish()
-
 
 ### CouchDB Loader
 
-Tinman includes tinman.loader.CouchDBLoader to enable the storage of templates
-in CouchDB to provide a common stemplate storage mechanism across multiple
-servers.
+Tinman includes tinman.loaders.couchdb.CouchDBLoader to enable the storage of
+templates in CouchDB to provide a common stemplate storage mechanism across
+multiple servers.
 
 Templates stored in CouchDB are stored with the full path as the document key
 and the template value is stored in the document using the key "template"

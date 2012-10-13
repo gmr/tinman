@@ -4,11 +4,6 @@ with regard to configuration, logging and daemoniaztion. Spawns a
 tornado.HTTPServer and Application per port using multiprocessing.
 
 """
-__author__ = 'Gavin M. Roy'
-__email__ = 'gmr@myyearbook.com'
-__since__ = '2011-12-31'
-
-
 import clihelper
 import logging
 import multiprocessing

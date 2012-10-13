@@ -11,7 +11,7 @@ from tornado import web
 from tinman import utils
 from tinman import __version__
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class TinmanApplication(web.Application):
@@ -52,7 +52,7 @@ class TinmanApplication(web.Application):
         self._prepare_version()
 
         # Prepare the routes
-        logger.debug('Routes: %r', routes)
+        LOGGER.debug('Routes: %r', routes)
         prepared_routes = self._prepare_routes(routes)
 
         # Setup the transforms
@@ -71,7 +71,7 @@ class TinmanApplication(web.Application):
         :param str path: The path to the translations
 
         """
-        logger.info('Loading translations from %s', path)
+        LOGGER.info('Loading translations from %s', path)
         from tornado import locale
         locale.load_translations(path)
 
@@ -82,7 +82,7 @@ class TinmanApplication(web.Application):
         :raises: ValueError
 
         """
-        logger.debug('Preparing paths')
+        LOGGER.debug('Preparing paths')
         # Try and load a package if specified
         package_path = None
         if 'package_name' in self._settings:
@@ -91,7 +91,7 @@ class TinmanApplication(web.Application):
                 package = __import__(self._settings['package_name'],
                                      globals(), locals())
             except ImportError as error:
-                logger.error('Could not import package %s in config: %s',
+                LOGGER.error('Could not import package %s in config: %s',
                                    self._settings['package_name'], error)
             if package:
                 package_path = path.abspath(path.dirname(package.__file__))
@@ -151,7 +151,7 @@ class TinmanApplication(web.Application):
         """
         # Validate it's a list or set
         if type(attributes) not in (list, tuple):
-            logger.error("Invalid route, must be a list or tuple: %r",
+            LOGGER.error("Invalid route, must be a list or tuple: %r",
                                attributes)
             return False
 
@@ -170,14 +170,14 @@ class TinmanApplication(web.Application):
             if len(attributes) == 3:
                 kwargs = attributes[2]
 
-        logger.debug("Initializing route: %s with %s", route, module)
+        LOGGER.debug("Initializing route: %s with %s", route, module)
 
         # Return the reference to the python class at the end of the
         # namespace. eg foo.Baz, foo.bar.Baz
         try:
             handler = utils.import_namespaced_class(module)
         except ImportError as error:
-            logger.error("Module import error for %s: %r",
+            LOGGER.error("Module import error for %s: %r",
                                module, error)
             return None
 
@@ -203,7 +203,7 @@ class TinmanApplication(web.Application):
         """
         if not isinstance(routes, list):
             raise ValueError("Routes parameter must be a list of tuples")
-        logger.debug('Preparing routes')
+        LOGGER.debug('Preparing routes')
 
         # Our prepared_routes is what we pass in to Tornado
         prepared_routes = list()
@@ -215,10 +215,10 @@ class TinmanApplication(web.Application):
             route = self._prepare_route(parts)
             if route:
                # Append our prepared_routes list
-                logger.info('Appending handler: %r', route)
+                LOGGER.info('Appending handler: %r', route)
                 prepared_routes.append(route)
             else:
-                logger.warn('Skipping route %r due to prepare error',
+                LOGGER.warn('Skipping route %r due to prepare error',
                                   parts)
 
         # Return the routes we prepared
@@ -227,7 +227,7 @@ class TinmanApplication(web.Application):
     def _prepare_transforms(self):
         """Prepare the UI Modules object"""
         if 'transforms' in self._settings:
-            logger.info('Preparing %i transform class(es) for import',
+            LOGGER.info('Preparing %i transform class(es) for import',
                               len(self._settings['transforms']))
             transforms = list()
             for transform in self._settings['transforms']:
@@ -235,20 +235,20 @@ class TinmanApplication(web.Application):
                     # Assign the modules to the import
                     transforms.append(utils.import_namespaced_class(transform))
                 except ImportError as error:
-                    logger.error("Error importing UI Modules %s: %s",
+                    LOGGER.error("Error importing UI Modules %s: %s",
                                        self._settings['ui_modules'], error)
             self._settings['transforms'] = transforms
 
     def _prepare_uimodules(self):
         """Prepare the UI Modules object"""
         if 'ui_modules' in self._settings:
-            logger.debug('Preparing uimodules for import')
+            LOGGER.debug('Preparing uimodules for import')
             try:
                 # Assign the modules to the import
                 self._settings['ui_modules'] = \
                     utils.import_namespaced_class(self._settings['ui_modules'])
             except ImportError as error:
-                logger.error("Error importing UI Modules %s: %s",
+                LOGGER.error("Error importing UI Modules %s: %s",
                                    self._settings['ui_modules'], error)
 
     def _prepare_version(self):
@@ -259,7 +259,7 @@ class TinmanApplication(web.Application):
     def log_request(self, handler):
         """Writes a completed HTTP request to the logs.
 
-        By default writes to the tinman.application logger.  To change
+        By default writes to the tinman.application LOGGER.  To change
         this behavior either subclass Application and override this method,
         or pass a function in the application settings dictionary as
         'log_function'.
@@ -268,11 +268,11 @@ class TinmanApplication(web.Application):
             self.settings["log_function"](handler)
             return
         if handler.get_status() < 400:
-            log_method = logger.info
+            log_method = LOGGER.info
         elif handler.get_status() < 500:
-            log_method = logger.warning
+            log_method = LOGGER.warning
         else:
-            log_method = logger.error
+            log_method = LOGGER.error
         request_time = 1000.0 * handler.request.request_time()
         log_method("%d %s %.2fms", handler.get_status(),
                    handler._request_summary(), request_time)
@@ -287,7 +287,7 @@ class TinmanAttributes(object):
         self._attributes = dict()
 
     def __contains__(self, value):
-        logger.debug('Running %s against %r', value, self._attributes)
+        LOGGER.debug('Running %s against %r', value, self._attributes)
         return value in self._attributes.keys()
 
     def __delattr__(self, name):

@@ -2,10 +2,6 @@
 Tinman Whitelist Module
 
 """
-__author__ = "Gavin M. Roy"
-__email__ = "gmr@myyearbook.com"
-__date__ = "2011-03-13"
-
 import ipaddr
 from tornado import web
 import types

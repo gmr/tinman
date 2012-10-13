@@ -2,11 +2,6 @@
 process.py
 
 """
-
-__author__ = 'Gavin M. Roy'
-__email__ = 'gmr@myyearbook.com'
-__since__ = '2012-04-29'
-
 from tinman import application
 import clihelper
 from tornado import httpserver
@@ -52,6 +47,14 @@ class TinmanProcess(multiprocessing.Process):
         return application.TinmanApplication(self._get_routes(),
                                              self._port,
                                              **self._get_application_config())
+
+    def _create_http_server(self):
+        """Setup the HTTPServer
+
+        :rtype: tornado.httpserver.HTTPServer
+
+        """
+        return self._start_httpserver(self._port, self._http_server_arguments)
 
     def _fixup_configuration(self, config):
         """Rewrite the SSL certreqs option if it exists, do this once instead
@@ -102,15 +105,6 @@ class TinmanProcess(multiprocessing.Process):
 
         """
         return self._config['Routes']
-
-    def _create_http_server(self):
-        """Setup the HTTPServer
-
-        :rtype: tornado.httpserver.HTTPServer
-
-        """
-        return self._start_httpserver(self._port, self._http_server_arguments)
-
     @property
     def _http_server_arguments(self):
         """Return a dictionary of HTTPServer arguments using the default values

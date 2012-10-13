@@ -1,11 +1,7 @@
 """
 Tinman Cache Module
-"""
-__author__ = "Gavin M. Roy"
-__email__ = "gmr@myyearbook.com"
-__date__ = "2010-03-10"
-__version__ = 0.2
 
+"""
 from functools import wraps
 from logging import debug
 

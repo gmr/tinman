@@ -25,7 +25,7 @@ with open('MANIFEST.in', 'w') as handle:
             handle.write('include %s\n' % filename)
 
 setup(name='tinman',
-      version='0.9.0',
+      version='0.9.1',
       description=("Tornado application wrapper and toolset for Tornado "
                    "development"),
       long_description=('Tinman is a take what you need package designed to '

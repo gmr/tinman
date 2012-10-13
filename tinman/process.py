@@ -140,16 +140,8 @@ class TinmanProcess(multiprocessing.Process):
         logger.info("Starting Tornado v%s HTTPServer on port %i Args: %r",
                     tornado_version, port, args)
         http_server = httpserver.HTTPServer(self._app, **args)
-        try:
-            http_server.listen(port)
-        except socket.error as error:
-            # If we couldn't bind to IPv6 (Tornado 2.0+)
-            if str(error).find('bad family'):
-                http_server.bind(port, family=socket.AF_INET)
-                http_server.start(1)
-
-        # Patch in the HTTP Port for Logging
-        self._app.http_port = port
+        http_server.bind(port, family=socket.AF_INET)
+        http_server.start(1)
         return http_server
 
     def on_sigterm(self, signal, frame):

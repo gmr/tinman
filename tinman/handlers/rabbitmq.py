@@ -58,14 +58,16 @@ class RabbitMQRequestHandler(web.RequestHandler):
         super(RabbitMQRequestHandler, self).__init__(application, request,
                                                      **kwargs)
 
-    def _add_to_publish_stack(self, message, properties):
+    def _add_to_publish_stack(self, exchange, routing_key, message, properties):
         """Temporarily add the message to the stack to publish to RabbitMQ
 
+        :param str exchange: The exchange to publish to
+        :param str routing_key: The routing key to publish with
         :param str message: The message body
         :param pika.BasicProperties: The message properties
 
         """
-        self._message_stack.append((message, properties))
+        self._message_stack.append((exchange, routing_key, message, properties))
 
     def _connect_to_rabbitmq(self):
         """Connect to RabbitMQ and assign a local attribute"""
@@ -134,7 +136,8 @@ class RabbitMQRequestHandler(web.RequestHandler):
         """
         if self._rabbitmq_is_closed or not self._rabbitmq_channel:
             LOGGER.info('Temporarily buffering message to publish')
-            self._add_to_publish_stack(message, properties)
+            self._add_to_publish_stack(exchange, routing_key,
+                                       message, properties)
             return
         self._rabbitmq_channel.basic_publish(exchange, routing_key,
                                              message, properties)

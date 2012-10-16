@@ -293,12 +293,13 @@ class TinmanAttributes(object):
     def __delattr__(self, name):
         if name not in self._attributes:
             raise AttributeError('%s is not set' % name)
-        del self._attributes[name]
+        if name in self._attributes:
+            del self._attributes[name]
 
     def __getattr__(self, item):
         if item == '_attributes':
             super(TinmanAttributes, self).__getattr__(item)
-        return self._attributes[item]
+        return self._attributes.get(item)
 
     def __setattr__(self, name, value):
         if name == '_attributes':
@@ -315,7 +316,6 @@ class TinmanAttributes(object):
         """
         if hasattr(self, name):
             raise AttributeError('%s already exists' % name)
-
         setattr(self, name, value)
 
     def remove(self, name):

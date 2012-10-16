@@ -15,7 +15,6 @@ from tornado import version as tornado_version
 # Tinman Imports
 from tinman import __desc__
 from tinman import __version__
-from tinman import application
 from tinman import process
 
 # Additional required configuration keys
@@ -159,4 +158,3 @@ def main():
     clihelper.setup('tinman', __desc__, __version__)
     add_required_config_keys()
     clihelper.run(TinmanController)
-

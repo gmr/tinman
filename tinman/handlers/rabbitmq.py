@@ -20,6 +20,10 @@ LOGGER = logging.getLogger(__name__)
 
 from tinman import exceptions
 
+message_stack = list()
+pending_rabbitmq_connection = None
+rabbitmq_connection = None
+
 
 class RabbitMQRequestHandler(web.RequestHandler):
     """The request handler will connect to RabbitMQ on the first request,
@@ -51,13 +55,6 @@ class RabbitMQRequestHandler(web.RequestHandler):
     CHANNEL = 'rabbitmq_channel'
     CONNECTION = 'rabbitmq_connection'
 
-    def __init__(self, application, request, **kwargs):
-        self._message_stack = list()
-        self._rabbitmq_channel_opening = False
-        self._rabbitmq_connection_opening = False
-        super(RabbitMQRequestHandler, self).__init__(application, request,
-                                                     **kwargs)
-
     def _add_to_publish_stack(self, exchange, routing_key, message, properties):
         """Temporarily add the message to the stack to publish to RabbitMQ
 
@@ -67,13 +64,15 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :param pika.BasicProperties: The message properties
 
         """
-        self._message_stack.append((exchange, routing_key, message, properties))
+        global message_stack
+        message_stack.append((exchange, routing_key, message, properties))
 
     def _connect_to_rabbitmq(self):
         """Connect to RabbitMQ and assign a local attribute"""
-        if not self._rabbitmq_connection_opening:
-            self._rabbitmq_connection_opening = True
-            self._set_rabbitmq_connection(self._new_rabbitmq_connection())
+        global pending_rabbitmq_connection, rabbitmq_connection
+        if not rabbitmq_connection:
+            LOGGER.info('Creating a new RabbitMQ connection')
+            pending_rabbitmq_connection = self._new_rabbitmq_connection()
 
     def _new_message_properties(self, content_type=None, content_encoding=None,
                                 headers=None, delivery_mode=None, priority=None,
@@ -119,11 +118,11 @@ class RabbitMQRequestHandler(web.RequestHandler):
         any requests buffered.
 
         """
-        if self._rabbitmq_channel and self._message_stack:
-            LOGGER.info('Publishing %i deferred message(s)',
-                        len(self._message_stack))
-            while self._message_stack:
-                self._publish_message(*self._message_stack.pop())
+        global message_stack
+        if not self._rabbitmq_is_closed and message_stack:
+            LOGGER.info('Publishing %i deferred message(s)', len(message_stack))
+            while message_stack:
+                self._publish_message(*message_stack.pop())
 
     def _publish_message(self, exchange, routing_key, message, properties):
         """Publish the message to RabbitMQ
@@ -135,7 +134,7 @@ class RabbitMQRequestHandler(web.RequestHandler):
 
         """
         if self._rabbitmq_is_closed or not self._rabbitmq_channel:
-            LOGGER.info('Temporarily buffering message to publish')
+            LOGGER.warning('Temporarily buffering message to publish')
             self._add_to_publish_stack(exchange, routing_key,
                                        message, properties)
             return
@@ -155,11 +154,12 @@ class RabbitMQRequestHandler(web.RequestHandler):
         return config
 
     @property
-    def _rabbitmq_connection(self):
-        return getattr(self.application.tinman, self.CONNECTION, None)
-
-    @property
     def _rabbitmq_channel(self):
+        """Return the Pika channel from the tinman object assignment.
+
+        :rtype: pika.channel.Channel
+
+        """
         return getattr(self.application.tinman, self.CHANNEL, None)
 
     @property
@@ -169,9 +169,8 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :rtype: bool
 
         """
-        return (not self._rabbitmq_connection or
-                (not self._rabbitmq_connection.is_open and
-                 not self._rabbitmq_connection_opening))
+        global rabbitmq_connection
+        return not rabbitmq_connection and not pending_rabbitmq_connection
 
     @property
     def _rabbitmq_parameters(self):
@@ -191,10 +190,12 @@ class RabbitMQRequestHandler(web.RequestHandler):
         return pika.ConnectionParameters(**kwargs)
 
     def _set_rabbitmq_channel(self, channel):
-        setattr(self.application.tinman, self.CHANNEL, channel)
+        """Assign the channel object to the tinman global object.
 
-    def _set_rabbitmq_connection(self, connection):
-        setattr(self.application.tinman, self.CONNECTION, connection)
+        :param pika.channel.Channel channel: The pika channel
+
+        """
+        setattr(self.application.tinman, self.CHANNEL, channel)
 
     def on_rabbitmq_close(self, reply_code, reply_text):
         """Called when RabbitMQ has been connected to.
@@ -203,9 +204,10 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :param str reply_text: The disconnect reason
 
         """
+        global rabbitmq_connection
         LOGGER.warning('RabbitMQ has disconnected (%s): %s',
                        reply_code, reply_text)
-        self._set_rabbitmq_connection(None)
+        rabbitmq_connection = None
         self._set_rabbitmq_channel(None)
         self._connect_to_rabbitmq()
 
@@ -215,10 +217,12 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :param pika.connection.Connection connection: The pika connection
 
         """
-        LOGGER.debug('RabbitMQ has connected')
-        self._rabbitmq_connection.add_on_close_callback(self.on_rabbitmq_close)
-        self._rabbitmq_connection_opening = False
-        self._rabbitmq_connection.channel(self.on_rabbitmq_channel_open)
+        global pending_rabbitmq_connection, rabbitmq_connection
+        LOGGER.info('RabbitMQ has connected')
+        rabbitmq_connection = connection
+        rabbitmq_connection.add_on_close_callback(self.on_rabbitmq_close)
+        rabbitmq_connection.channel(self.on_rabbitmq_channel_open)
+        pending_rabbitmq_connection = None
 
     def on_rabbitmq_channel_open(self, channel):
         """Called when the RabbitMQ accepts the channel open request.
@@ -226,8 +230,8 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :param pika.channel.Channel channel: The channel opened with RabbitMQ
 
         """
-        LOGGER.debug('Channel %i is opened for communication with RabbitMQ',
-                     channel.channel_number)
+        LOGGER.info('Channel %i is opened for communication with RabbitMQ',
+                    channel.channel_number)
         self._set_rabbitmq_channel(channel)
         self._publish_deferred_messages()
 
@@ -237,6 +241,5 @@ class RabbitMQRequestHandler(web.RequestHandler):
 
         """
         super(RabbitMQRequestHandler, self).prepare()
-        # Connect to RabbitMQ if disconnected
         if self._rabbitmq_is_closed:
             self._connect_to_rabbitmq()

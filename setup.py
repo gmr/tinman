@@ -25,7 +25,7 @@ with open('MANIFEST.in', 'w') as handle:
             handle.write('include %s\n' % filename)
 
 setup(name='tinman',
-      version='0.9.2',
+      version='0.9.3',
       description=("Tornado application wrapper and toolset for Tornado "
                    "development"),
       long_description=('Tinman is a take what you need package designed to '
@@ -50,7 +50,8 @@ setup(name='tinman',
                 'tinman.session',
                 'tinman.utilities'],
       install_requires=requirements,
-      extras_require={'LDAP': 'python-ldap',
+      extras_require={'Heapy': 'guppy',
+                      'LDAP': 'python-ldap',
                       'MsgPack Sessions': 'msgpack',
                       'PostgreSQL': 'psycopg2',
                       'RabbitMQ': 'pika',
@@ -60,5 +61,7 @@ setup(name='tinman',
       data_files=[(key, data_files[key]) for key in data_files.keys()],
       entry_points=dict(console_scripts=['tinman=tinman.controller:main',
                                          'tinman-init=tinman.utilities.'
-                                         'initialize:main']),
+                                         'initialize:main',
+                                         'tinman-heap-report=tinman.utilities.'
+                                         'heapy_report:main']),
       zip_safe=True)

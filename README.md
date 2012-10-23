@@ -108,8 +108,9 @@ session behavior to use different types of storage backends and serializers.
 #### Heapy
 The Heapy handler uses the guppy library to inspect the memory stack of your
 running Tinman application, providing a JSON document back with the results.
-It is *very* slow and blocking so it should be used very sparingly and if used
-on a production application, with the whitelist decorator.
+It is *very* slow and blocking and can take many *MINUTES* to complete so it
+should be used very sparingly and if used on a production application, with
+the whitelist decorator.
 
 To use the Heapy handler, just add the route to your configuration:
 

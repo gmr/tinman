@@ -105,7 +105,63 @@ session behavior to use different types of storage backends and serializers.
           super(Handler, self).prepare()
           # Do other stuff here
 
+#### Heapy
+The Heapy handler uses the guppy library to inspect the memory stack of your
+running Tinman application, providing a JSON document back with the results.
+It is *very* slow and blocking so it should be used very sparingly and if used
+on a production application, with the whitelist decorator.
 
+To use the Heapy handler, just add the route to your configuration:
+
+      - [/heapy, tinman.handlers.heapy.HeapyRequestHandler]
+
+##### Example Output
+The following is a very abbreviated repport:
+
+    {
+        "rows": [
+            {
+                "count": {
+                    "percent": 40,
+                    "value": 45068
+                },
+                "cumulative": {
+                    "percent": 29,
+                    "value": 4159016
+                },
+                "item": "types.CodeType",
+                "referrers": {
+                    "rows": [
+                        {
+                            "count": {
+                                "percent": 96,
+                                "value": 7290
+                            },
+                            "cumulative": {
+                                "percent": 96,
+                                "value": 874800
+                            },
+                            "item": "function",
+                            "size": {
+                                "percent": 96,
+                                "value": 874800
+                            }
+                        }
+                    ],
+                    "title": "Referrers by Kind (class / dict of class)",
+                    "total_bytes": 911160,
+                    "total_objects": 7593
+                },
+                "size": {
+                    "percent": 29,
+                    "value": 4159016
+                }
+            }
+        ],
+        "title": "Referrers by Kind (class / dict of class)",
+        "total_bytes": 14584240,
+        "total_objects": 113444
+    }
 
 
 ### Configuration

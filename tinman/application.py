@@ -98,7 +98,7 @@ class TinmanApplication(web.Application):
 
         # Create a list of variables to replace our values with
         paths = list()
-        for path_name in ['static_path', 'template_path', 'translation_path']:
+        for path_name in ['static_path', 'template_path', 'translations_path']:
             if path_name in self._settings:
                 paths.append(path_name)
 

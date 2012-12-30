@@ -7,7 +7,6 @@ import sys
 from socket import gethostname
 
 
-
 def application_name():
     """Returns the currently running application name
 

@@ -160,7 +160,7 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :rtype: pika.channel.Channel
 
         """
-        return getattr(self.application.tinman, self.CHANNEL, None)
+        return getattr(self.application.attributes, self.CHANNEL, None)
 
     @property
     def _rabbitmq_is_closed(self):
@@ -195,7 +195,7 @@ class RabbitMQRequestHandler(web.RequestHandler):
         :param pika.channel.Channel channel: The pika channel
 
         """
-        setattr(self.application.tinman, self.CHANNEL, channel)
+        setattr(self.application.attributes, self.CHANNEL, channel)
 
     def on_rabbitmq_close(self, reply_code, reply_text):
         """Called when RabbitMQ has been connected to.

@@ -46,7 +46,7 @@ class SessionAdapter(object):
     session data.
 
     """
-    def __init__(self, session_id=None, configuration=None,
+    def __init__(self, application, session_id=None, configuration=None,
                  duration=DEFAULT_DURATION):
         """Create a session adapter for the base URL specified, creating a new
         session if no session id is passed in.
@@ -58,6 +58,7 @@ class SessionAdapter(object):
         """
         self.__dict__['attributes'] = dict()
         self.__dict__['data'] = dict()
+        self._application = application
         self._config = configuration or dict()
         self._duration = duration
         self.__dict__['attributes']['_id'] = session_id or self._create_id()
@@ -273,20 +274,21 @@ class FileSessionAdapter(SessionAdapter):
     """
     SUBDIR = 'tinman'
 
-    def __init__(self, session_id=None, configuration=None,
+    def __init__(self, application, session_id=None, configuration=None,
                  duration=DEFAULT_DURATION):
         """Create a session adapter for the base URL specified, creating a new
         session if no session id is passed in.
 
+        :param tinman.application.Application application: The Tinman app
         :param str session_id: The current session id if once has been started
         :param dict configuration: Session storage configuration
         :param int duration: The session duration for storage retention
 
         """
-        super(FileSessionAdapter, self).__init__(session_id, configuration,
-                                                 duration)
+        super(FileSessionAdapter, self).__init__(application, session_id,
+                                                 configuration, duration)
         self._storage_dir = self._setup_storage_dir()
-        if self._config.get('cleanup', True):
+        if self.config.get('cleanup', True):
             self._cleanup()
 
     def _cleanup(self):
@@ -346,7 +348,7 @@ class FileSessionAdapter(SessionAdapter):
         :raises: tinman.exceptions.ConfigurationException
 
         """
-        path = self._config.get('directory')
+        path = self.config.get('directory')
         if path:
             if not os.path.exists(path) or not os.path.isdir(path):
                 raise exceptions.ConfigurationException('FileSessionAdapter '
@@ -379,14 +381,17 @@ class FileSessionAdapter(SessionAdapter):
             raise error
 
 
+def get_session_adapter(application, session_id, configuration, duration):
 
-def get_session_adapter(session_id, configuration, duration):
+    LOGGER.debug('Returning a new session adapter: %r %r', configuration, duration)
 
     if configuration.get('class') == 'FileSessionHandler':
-        return FileSessionAdapter(session_id, configuration, duration)
+        return FileSessionAdapter(application, session_id,
+                                  configuration, duration)
+
     elif configuration.get('class') == 'RedisSessionHandler':
         from tinman.session import redis_adapter
-        return redis_adapter.RedisSessionAdapter(session_id,
+        return redis_adapter.RedisSessionAdapter(application, session_id,
                                                  configuration, duration)
 
     raise exceptions.ConfigurationException('Session Adapter')

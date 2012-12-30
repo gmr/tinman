@@ -28,8 +28,32 @@ class SessionRequestHandler(web.RequestHandler):
     All options other than the adapter class are optional.
 
     """
+    ADAPTER = 'adapter'
+    COOKIE = 'cookie'
+    DURATION = 'duration'
+    NAME = 'name'
+
+    COOKIE_NAME = 'session'
     DEFAULT_DURATION = 3600
-    DEFAULT_COOKIE_NAME = 'session'
+
+    def on_finish(self):
+        """Called by Tornado when the request is done. Save the request and
+        remove the redis connection.
+
+        """
+        super(SessionRequestHandler, self).on_finish()
+        self._session.last_request_uri = self.request.uri
+        self._session.save()
+        del self._session
+
+    def prepare(self):
+        super(SessionRequestHandler, self).prepare()
+        self._session = self._get_session_object()
+        self._session.load()
+        if not self._session.ip_address:
+            self._session.ip_address = self.request.remote_ip
+        LOGGER.debug('Session ID: %s', self._session.id)
+        self._set_session_cookie()
 
     def _clear_session(self):
         """Clear the user's sessions, resetting the cookies and removing the
@@ -48,6 +72,19 @@ class SessionRequestHandler(web.RequestHandler):
         """
         return self.get_secure_cookie(self._session_cookie_name, None)
 
+    def _get_session_object(self):
+        """Return an instance of the session object for the current session.
+        If there is no pre-existing session, the session object will be created
+        with a new session id.
+
+        :rtype: tinman.session.SessionAdapter
+
+        """
+        return session.get_session_adapter(self.application,
+                                           self._get_session_id(),
+                                           self._session_adapter_settings,
+                                           self._session_duration)
+
     @property
     def _session_adapter_settings(self):
         """Return the session adapter settings
@@ -55,7 +92,7 @@ class SessionRequestHandler(web.RequestHandler):
         :rtype: dict
 
         """
-        return self._session_settings.get('adapter') or dict()
+        return self._session_settings.get(self.ADAPTER) or dict()
 
     @property
     def _session_cookie_expiration(self):
@@ -76,8 +113,7 @@ class SessionRequestHandler(web.RequestHandler):
         :rtype: str
 
         """
-        return self._session_cookie_settings.get('name',
-                                                 self.DEFAULT_COOKIE_NAME)
+        return self._session_cookie_settings.get(self.NAME, self.COOKIE_NAME)
 
     @property
     def _session_cookie_settings(self):
@@ -86,7 +122,7 @@ class SessionRequestHandler(web.RequestHandler):
         :rtype: dict
 
         """
-        return self._session_settings.get('cookie')
+        return self._session_settings.get(self.COOKIE)
 
     @property
     def _session_duration(self):
@@ -96,7 +132,7 @@ class SessionRequestHandler(web.RequestHandler):
         :rtype: int
 
         """
-        return self._session_settings.get('duration', self.DEFAULT_DURATION)
+        return self._session_settings.get(self.DURATION, self.DEFAULT_DURATION)
 
     @property
     def _session_settings(self):
@@ -114,33 +150,4 @@ class SessionRequestHandler(web.RequestHandler):
                                value=self._session.id,
                                expires=self._session_cookie_expiration)
 
-    def _get_session_object(self):
-        """Return an instance of the session object for the current session.
-        If there is no pre-existing session, the session object will be created
-        with a new session id.
 
-        :rtype: tinman.session.SessionAdapter
-
-        """
-        return session.get_session_adapter(self._get_session_id(),
-                                           self._session_adapter_settings,
-                                           self._session_duration)
-
-    def prepare(self):
-        """Prepare the request, starting a session if one does not exist."""
-        super(SessionRequestHandler, self).prepare()
-        self._session = self._get_session_object()
-        self._session.load()
-        if not self._session.ip_address:
-            self._session.ip_address = self.request.remote_ip
-        LOGGER.debug('Session ID: %s', self._session.id)
-        self._set_session_cookie()
-
-    def on_finish(self):
-        """Called by Tornado when the request is done. Save the request and
-        remove the redis connection.
-
-        """
-        LOGGER.debug('Saving session')
-        self._session.last_request_uri = self.request.uri
-        self._session.save()

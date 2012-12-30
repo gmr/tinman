@@ -8,37 +8,28 @@ from tornado import web
 
 LOGGER = logging.getLogger(__name__)
 
-redis_client = None
-
 
 class RedisRequestHandler(web.RequestHandler):
     """This request handler will connect to Redis on initialize if the
     connection is not previously set.
 
     """
+    REDIS = 'redis'
     REDIS_HOST = 'localhost'
     REDIS_PORT = 6379
     REDIS_DB = 0
 
-    def _connect_to_redis(self):
-        """Connect to a Redis server returning the handle to the redis
-        connection.
-
-        :rtype: tornadoredis.Redis
+    def _new_redis_client(self):
+        """Create a new redis client and assign it to the application.attributes
+        object for reuse later.
 
         """
+        LOGGER.info('Creating new Redis instance')
         settings = self._redis_settings
         LOGGER.debug('Connecting to redis: %r', settings)
         client = tornadoredis.Client(**settings)
         client.connect()
-        return client
-
-    def _new_redis_client(self):
-        """Create a new redis client and assign it to the module level handle.
-
-        """
-        global redis_client
-        redis_client = self._connect_to_redis()
+        self.application.attributes.add(self.REDIS, client)
 
     @property
     def _redis_settings(self):
@@ -59,18 +50,17 @@ class RedisRequestHandler(web.RequestHandler):
         connected tornadoredis.Client object.
 
         """
-        global redis_client
         super(RedisRequestHandler, self).prepare()
-        if redis_client is None or not redis_client.connection.connected:
-            LOGGER.info('Creating new Redis instance')
+        if self.REDIS not in self.application.attributes:
             self._new_redis_client()
 
     @property
-    def redis_client(self):
+    def redis(self):
         """Return a handle to the active redis client.
 
         :rtype: tornadoredis.Redis
 
         """
-        global redis_client
-        return redis_client
+        if self.REDIS not in self.application.attributes:
+            self._new_redis_client()
+        return self.application.attributes.redis

@@ -5,9 +5,6 @@ initial directory structure and virtual environment, if desired.
 import argparse
 import logging
 import os
-from os import path
-import sys
-
 
 DESCRIPTION = ('A tool to create a new tinman project, including the directory '
                'structure, setup.py file and skeleton configuration')

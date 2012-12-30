@@ -3,24 +3,34 @@ Main Tinman Application Class
 
 """
 import logging
-from os import path
 import sys
 from tornado import web
 
-# Import our version number
 from tinman import utils
 from tinman import __version__
 
 LOGGER = logging.getLogger(__name__)
 
+__BASE__ = '{{base}}'
+BASE = 'base'
+DEFAULT_LOCALE = 'default_locale'
+PATHS = 'paths'
+STATIC = 'static'
+TEMPLATES = 'templates'
+TRANSFORMS = 'transforms'
+TRANSLATIONS = 'translations'
+UI_MODULES = 'ui_modules'
+VERSION = 'version'
 
-class TinmanApplication(web.Application):
-    """TinmanApplication extends web.Application and handles all sorts of things
+
+class Application(web.Application):
+    """Application extends web.Application and handles all sorts of things
     for you that you'd have to handle yourself.
 
     """
+
     def __init__(self, routes=None, port=None, **settings):
-        """Create a new TinmanApplication instance with the specified Routes and
+        """Create a new Application instance with the specified Routes and
         settings.
 
         :param list routes: A list of route tuples
@@ -28,233 +38,22 @@ class TinmanApplication(web.Application):
         :param dict settings: Application settings
 
         """
-        # Assign the settings
-        self._settings = settings or dict()
-
-        # If we have a base path, add it to our sys path
-        if 'base_path' in settings:
-            sys.path.insert(0, settings['base_path'])
-
-        # Create a TinmanAttributes for assignments to application scope
-        self.tinman = TinmanAttributes()
-
-        # A handle for a HTTP Port we may want to use when logging
+        self.attributes = Attributes()
         self.port = port
-
-        # Prepare the paths
+        self._config = settings or dict()
+        self._insert_base_path()
         self._prepare_paths()
-
-        # If a translation paths is specified, load the translations
-        if 'translations_path' in self._settings:
-            self._load_translations(self._settings['translations_path'])
-
-        # Set the app version from the version setting in this file
+        self._prepare_static_path()
+        self._prepare_template_path()
+        self._prepare_transforms()
+        self._prepare_translations()
+        self._prepare_uimodules()
         self._prepare_version()
 
-        # Prepare the routes
-        LOGGER.debug('Routes: %r', routes)
+        # Get the routes and initialize the tornado.web.Application instance
         prepared_routes = self._prepare_routes(routes)
-
-        # Setup the transforms
-        self._prepare_transforms()
-
-        # Setup the UI modules
-        self._prepare_uimodules()
-
-        # Create our Application for this process
-        super(TinmanApplication, self).__init__(prepared_routes,
-                                                **self._settings)
-
-    def _load_translations(self, path):
-        """Load the translations from the specified path.
-
-        :param str path: The path to the translations
-
-        """
-        LOGGER.info('Loading translations from %s', path)
-        from tornado import locale
-        locale.load_translations(path)
-
-    def _prepare_paths(self):
-        """Setup and override the settings values for given paths by finding the
-        locations of base_path if set, package location if set, etc.
-
-        :raises: ValueError
-
-        """
-        LOGGER.debug('Preparing paths')
-        # Try and load a package if specified
-        package_path = None
-        if 'package_name' in self._settings:
-            package = None
-            try:
-                package = __import__(self._settings['package_name'],
-                                     globals(), locals())
-            except ImportError as error:
-                LOGGER.error('Could not import package %s in config: %s',
-                                   self._settings['package_name'], error)
-            if package:
-                package_path = path.abspath(path.dirname(package.__file__))
-
-        # Create a list of variables to replace our values with
-        paths = list()
-        for path_name in ['static_path', 'template_path', 'translations_path']:
-            if path_name in self._settings:
-                paths.append(path_name)
-
-        # If we have a package path, replace it if needed
-        if package_path:
-            for path_name in paths:
-                self._replace_path(path_name, '__package_path__', package_path)
-
-        # If we have a package path, replace it if needed
-        if self._settings.get('base_path'):
-            for path_name in paths:
-                self._replace_path(path_name, '__base_path__',
-                                   self._settings['base_path'])
-
-        # Make sure we've updated the core variables as needed
-        for variable in ['__base_path', '__package_path__']:
-            for path_name in paths:
-                if self._settings[path_name].find(variable) > -1:
-                    raise ValueError('%s called for but not set', variable)
-
-    def _replace_path(self, path_name, name, value):
-        """Replace the name with the value for the given path_name name.
-
-        :param str path_name: The path_name name
-        :param str name: The string to replace in original string
-        :param str value: The string value replacement value for name
-
-        """
-        # If we have a base path_name, replace it if needed
-        if path_name in self._settings:
-            self._settings[path_name] = self._settings[path_name].replace(name,
-                                                                          value)
-
-    def _set_path(self, path_name, path_value):
-        """Set the specified path setting with the given value
-
-        :param str path_name: The path to set
-        :param str path_value: Path to set it to
-
-        """
-        self._settings[path_name] = path_value
-
-    def _prepare_route(self, attributes):
-        """Take a given inbound list for a route and parse it creating the
-        route and importing the class it belongs to.
-
-        :param list attributes: Route attributes
-        :rtype: list
-
-        """
-        # Validate it's a list or set
-        if type(attributes) not in (list, tuple):
-            LOGGER.error("Invalid route, must be a list or tuple: %r",
-                               attributes)
-            return False
-
-        # By default we do not have extra kwargs
-        kwargs = None
-
-        # If we have a regex based route, set it up with a raw string
-        if attributes[0] == 're':
-            route = r"%s" % attributes[1]
-            module = attributes[2]
-            if len(attributes) == 4:
-                kwargs = attributes[3]
-        else:
-            route  = r"%s" % attributes[0]
-            module = attributes[1]
-            if len(attributes) == 3:
-                kwargs = attributes[2]
-
-        LOGGER.debug("Initializing route: %s with %s", route, module)
-
-        # Return the reference to the python class at the end of the
-        # namespace. eg foo.Baz, foo.bar.Baz
-        try:
-            handler = utils.import_namespaced_class(module)
-        except ImportError as error:
-            LOGGER.error("Module import error for %s: %r",
-                               module, error)
-            return None
-
-        # Our base prepared route
-        prepared_route = [route, handler]
-
-        # If the route has an optional kwargs dict
-        if kwargs:
-            prepared_route.append(kwargs)
-
-        # Return the route
-        return tuple(prepared_route)
-
-    def _prepare_routes(self, routes):
-        """Prepare the routes by iterating through the list of tuples & calling
-        prepare route on them.
-
-        :param routes: Routes to prepare
-        :type routes: list
-        :rtype: list
-        :raises: ValueError
-
-        """
-        if not isinstance(routes, list):
-            raise ValueError("Routes parameter must be a list of tuples")
-        LOGGER.debug('Preparing routes')
-
-        # Our prepared_routes is what we pass in to Tornado
-        prepared_routes = list()
-
-        # Iterate through the routes
-        for parts in routes:
-
-            # Prepare the route
-            route = self._prepare_route(parts)
-            if route:
-               # Append our prepared_routes list
-                LOGGER.info('Appending handler: %r', route)
-                prepared_routes.append(route)
-            else:
-                LOGGER.warn('Skipping route %r due to prepare error',
-                                  parts)
-
-        # Return the routes we prepared
-        return prepared_routes
-
-    def _prepare_transforms(self):
-        """Prepare the UI Modules object"""
-        if 'transforms' in self._settings:
-            LOGGER.info('Preparing %i transform class(es) for import',
-                              len(self._settings['transforms']))
-            transforms = list()
-            for transform in self._settings['transforms']:
-                try:
-                    # Assign the modules to the import
-                    transforms.append(utils.import_namespaced_class(transform))
-                except ImportError as error:
-                    LOGGER.error("Error importing UI Modules %s: %s",
-                                       self._settings['ui_modules'], error)
-            self._settings['transforms'] = transforms
-
-    def _prepare_uimodules(self):
-        """Prepare the UI Modules object"""
-        if 'ui_modules' in self._settings:
-            LOGGER.debug('Preparing uimodules for import')
-            try:
-                # Assign the modules to the import
-                self._settings['ui_modules'] = \
-                    utils.import_namespaced_class(self._settings['ui_modules'])
-            except ImportError as error:
-                LOGGER.error("Error importing UI Modules %s: %s",
-                                   self._settings['ui_modules'], error)
-
-    def _prepare_version(self):
-        """Setup the application version"""
-        if 'version' not in self._settings:
-            self._settings['version'] = __version__
+        LOGGER.debug('Routes: %r', routes)
+        super(Application, self).__init__(prepared_routes, **self._config)
 
     def log_request(self, handler):
         """Writes a completed HTTP request to the logs.
@@ -277,54 +76,317 @@ class TinmanApplication(web.Application):
         log_method("%d %s %.2fms", handler.get_status(),
                    handler._request_summary(), request_time)
 
+    @property
+    def paths(self):
+        """Return the path configuration
 
-class TinmanAttributes(object):
+        :rtype: dict
+
+        """
+        return self._config.get(PATHS, dict())
+
+    def _import_class(self, class_path):
+        """Try and import the specified namespaced class.
+
+        :param str class_path: The full path to the class (foo.bar.Baz)
+        :rtype: class
+
+        """
+        LOGGER.debug('Attempting to import %s', class_path)
+        try:
+            return utils.import_namespaced_class(class_path)
+        except ImportError as error:
+            LOGGER.critical('Could not import %s: %s', class_path, error)
+            return None
+
+    def _import_module(self, module_path):
+        """Dynamically import a module returning a handle to it.
+
+        :param str module_path: The module path
+        :rtype:
+
+        """
+        LOGGER.debug('Attempting to import %s', module_path)
+        try:
+            return __import__(module_path)
+        except ImportError as error:
+            LOGGER.critical('Could not import %s: %s', module_path, error)
+            return None
+
+    def _insert_base_path(self):
+        """If the "base" path is set in the paths section of the config, insert
+        it into the python path.
+
+        """
+        if BASE in self.paths:
+            sys.path.insert(0, self.paths[BASE])
+
+    def _prepare_paths(self):
+        """Set the value of {{base}} in paths if the base path is set in the
+        configuration.
+
+        :raises: ValueError
+
+        """
+        LOGGER.debug('Preparing paths')
+        if BASE in self.paths:
+            for path_name in self.paths:
+                if path_name != BASE:
+                    self._replace_path(path_name, __BASE__, self.paths[BASE])
+            LOGGER.debug('Prepared paths: %r', self.paths)
+
+    def _prepare_route(self, attrs):
+        """Take a given inbound list for a route and parse it creating the
+        route and importing the class it belongs to.
+
+        :param list attrs: Route attributes
+        :rtype: list
+
+        """
+        if type(attrs) not in (list, tuple):
+            LOGGER.error('Invalid route, must be a list or tuple: %r', attrs)
+            return
+
+        # By default there are not any extra kwargs
+        kwargs = None
+
+        # If there is a regex based route, set it up with a raw string
+        if attrs[0] == 're':
+            route = r'%s' % attrs[1]
+            classpath = attrs[2]
+            if len(attrs) == 4:
+                kwargs = attrs[3]
+        else:
+            route = r'%s' % attrs[0]
+            classpath = attrs[1]
+            if len(attrs) == 3:
+                kwargs = attrs[2]
+
+        LOGGER.debug('Initializing route: %s with %s', route, classpath)
+        try:
+            handler = self._import_class(classpath)
+        except ImportError as error:
+            LOGGER.error('Class import error for %s: %r', classpath, error)
+            return None
+
+        # Setup the prepared route, adding kwargs if there are any
+        prepared_route = [route, handler]
+        if kwargs:
+            prepared_route.append(kwargs)
+
+        # Return the prepared route as a tuple
+        return tuple(prepared_route)
+
+    def _prepare_routes(self, routes):
+        """Prepare the routes by iterating through the list of tuples & calling
+        prepare route on them.
+
+        :param routes: Routes to prepare
+        :type routes: list
+        :rtype: list
+        :raises: ValueError
+
+        """
+        if not isinstance(routes, list):
+            raise ValueError('Routes parameter must be a list of tuples')
+        LOGGER.debug('Preparing routes')
+        prepared_routes = list()
+        for parts in routes:
+            route = self._prepare_route(parts)
+            if route:
+                LOGGER.info('Appending handler: %r', route)
+                prepared_routes.append(route)
+        return prepared_routes
+
+    def _prepare_static_path(self):
+        if STATIC in self.paths:
+            self._config['static_path'] = self.paths[STATIC]
+
+    def _prepare_template_path(self):
+        if TEMPLATES in self.paths:
+            self._config['template_path'] = self.paths[TEMPLATES]
+
+    def _prepare_transforms(self):
+        """Prepare the list of transforming objects"""
+        if TRANSFORMS in self._config:
+            LOGGER.info('Preparing %i transform class(es) for import',
+                        len(self._config[TRANSFORMS]))
+            for transform in [self._import_module(transform) for transform in
+                              self._config[TRANSFORMS]]:
+                LOGGER.debug('Adding transform: %r', transform)
+                self.add_transform(transform)
+
+    def _prepare_translations(self):
+        """Load in translations if they are set, and add the default locale as
+        well.
+
+        """
+        if TRANSLATIONS in self.paths:
+            LOGGER.info('Loading translations from %s',
+                        self.paths[TRANSLATIONS])
+            from tornado import locale
+            locale.load_translations(self.paths[TRANSLATIONS])
+            if DEFAULT_LOCALE in self._config:
+                LOGGER.info('Setting default locale to %s',
+                            self._config[DEFAULT_LOCALE])
+                locale.set_default_locale(self._config[DEFAULT_LOCALE])
+
+    def _prepare_uimodule(self):
+        self._config[UI_MODULES] = self._import_module(self._config[UI_MODULES])
+
+    def _prepare_uimodule_dict(self):
+        for key, value in self._config[UI_MODULES].items():
+            self._config[UI_MODULES][key] = self._import_module(value)
+
+    def _prepare_uimodule_list(self):
+        for offset, value in enumerate(self._config[UI_MODULES]):
+            self._config[UI_MODULES][offset] = self._import_module(value)
+
+    def _prepare_uimodules(self):
+        """Prepare the UI Modules object, handling the three cases that Tornado
+        supports for the ui_modules configuration: a single module, a mapping
+        of modules in a dictionary or a list of modules.
+
+        """
+        if UI_MODULES in self._config:
+            if isinstance(self._config[UI_MODULES], str):
+                self._prepare_uimodule()
+            elif isinstance(self._config[UI_MODULES], dict()):
+                self._prepare_uimodule_dict()
+            elif isinstance(self._config[UI_MODULES], list):
+                self._prepare_uimodule_list()
+            else:
+                LOGGER.critical('Unknown format for %s configuration: %s',
+                                UI_MODULES, type(self._config[UI_MODULES]))
+
+    def _prepare_version(self):
+        """Setup the application version"""
+        if VERSION not in self._config:
+            self._config[VERSION] = __version__
+
+    def _replace_path(self, path_name, name, value):
+        """Replace the name with the value for the given path_name name.
+
+        :param str path_name: The path_name name
+        :param str name: The string to replace in original string
+        :param str value: The string value replacement value for name
+
+        """
+        if path_name in self.paths:
+            self.paths[path_name] = self.paths[path_name].replace(name, value)
+
+
+class Attributes(object):
     """A base object to hang attributes off of for application level scope that
     can be used across connections.
 
     """
+    ATTRIBUTES = '_attributes'
+
     def __init__(self):
+        """Create a new instance of the Attributes class"""
         self._attributes = dict()
 
-    def __contains__(self, value):
-        LOGGER.debug('Running %s against %r', value, self._attributes)
-        return value in self._attributes.keys()
+    def __contains__(self, item):
+        """Check to see if an attribute is set on the object.
 
-    def __delattr__(self, name):
-        if name not in self._attributes:
-            raise AttributeError('%s is not set' % name)
-        if name in self._attributes:
-            del self._attributes[name]
+        :param str item: The attribute name
+        :rtype: bool
+
+        """
+        return item in self.__dict__[self.ATTRIBUTES].keys()
+
+    def __delattr__(self, item):
+        """Delete an attribute from the object.
+
+        :param str item: The attribute name
+        :raises: AttributeError
+
+        """
+        if item == self.ATTRIBUTES:
+            raise AttributeError('Can not delete %s', item)
+        if item not in self.__dict__[self.ATTRIBUTES]:
+            raise AttributeError('%s is not set' % item)
+        del self.__dict__[self.ATTRIBUTES][item]
 
     def __getattr__(self, item):
-        if item == '_attributes':
-            super(TinmanAttributes, self).__getattr__(item)
-        return self._attributes.get(item)
+        """Get an attribute from the class.
 
-    def __setattr__(self, name, value):
-        if name == '_attributes':
-            super(TinmanAttributes, self).__setattr__(name, value)
-        self._attributes[name] = value
+        :param str item: The attribute name
+        :rtype: any
 
-    def add(self, name, value):
+        """
+        if item == self.ATTRIBUTES:
+            return self.__dict__[item]
+        return self.__dict__[self.ATTRIBUTES].get(item)
+
+
+    def __iter__(self):
+        """Iterate through the keys in the data dictionary.
+
+        :rtype: list
+
+        """
+        return iter(self.__dict__[self.ATTRIBUTES])
+
+    def __len__(self):
+        """Return the length of the data dictionary.
+
+        :rtype: int
+
+        """
+        return len(self.__dict__[self.ATTRIBUTES])
+
+    def __repr__(self):
+        """Return the representation of the class as a string.
+
+        :rtype: str
+
+        """
+        return '<%s(%r)>' % (self.__class__.__name__,
+                             self.__dict__[self.ATTRIBUTES])
+
+    def __setattr__(self, item, value):
+        """Set an attribute on the object.
+
+        :param str item: The attribute name
+        :param any value: The attribute value
+
+        """
+        if item == self.ATTRIBUTES:
+            self.__dict__[item] = value
+        else:
+            self.__dict__[self.ATTRIBUTES][item] = value
+
+    def add(self, item, value):
         """Add an attribute value to our object instance.
 
-        :param str name: Connection attribute name
+        :param str item: Application attribute name
         :param any value: Value to associate with the attribute
         :raises: AttributeError
 
         """
-        if hasattr(self, name):
-            raise AttributeError('%s already exists' % name)
-        setattr(self, name, value)
+        if item in self.__dict__[self.ATTRIBUTES].keys():
+            raise AttributeError('%s already exists' % item)
+        setattr(self, item, value)
 
-    def remove(self, name):
+    def remove(self, item):
         """Remove an attribute value to our object instance.
 
-        :param str name: Connection attribute name
+        :param str item: Application attribute name
         :raises: AttributeError
 
         """
-        if not hasattr(self, name):
-            raise AttributeError('%s does not exist' % name)
-        delattr(self, name)
+        if item not in self.__dict__[self.ATTRIBUTES].keys():
+            raise AttributeError('%s does not exist' % item)
+        delattr(self, item)
+
+    def set(self, item, value):
+        """Set an attribute value to our object instance.
+
+        :param str item: Application attribute name
+        :param any value: Value to associate with the attribute
+        :raises: AttributeError
+
+        """
+        setattr(self, item, value)

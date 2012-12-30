@@ -30,7 +30,7 @@ Install via pip or easy_install:
 ## Module Descriptions
 
 - tinman
-  - application: TinmanApplication extends tornado.web.Application, handling the autoloading of configuration for routes, logging, translations, etc.
+  - application: Application extends tornado.web.Application, handling the auto-loading of configuration for routes, logging, translations, etc.
   - controller: Core tinman application controller.
   - decorators: Authentication, memoization and whitelisting decorators.
   - exceptions: Tinman specific exceptions
@@ -169,10 +169,14 @@ The following is a very abbreviated repport:
 
 #### Application Options
 The following are the keys that are available to be used for your Tinman/Tornado application.
-
-- base_path: The root of the files for the application
 - cookie_secret: A salt for signing cookies when using secure cookies
+- debug: Toggle tornado.Application's debug mode
 - login_url: Login URL when using Tornado's @authenticated decorator
+- paths:
+   - base: The root of the files for the application
+   - static: The path to static files
+   - templates: The path to template files
+   - translations: The path to translation files
 - redis: If using tinman.handlers.redis.RedisRequestHandler to auto-connect to redis.
   - host: The redis server IP address
   - port: The port number
@@ -185,17 +189,15 @@ The following are the keys that are available to be used for your Tinman/Tornado
   - password: the password
 - session: Configuration if using tinman.handlers.session.SessionRequestHandler
   - adapter:
-    - class: The classname for the adapte,r one of FileSessionAdapter, RedisSessionAdapter
+    - class: The classname for the adapter. One of FileSessionAdapter, RedisSessionAdapter
     - configuration: SessionAdapter specific configuration
   - cookie:
     - name: The cookie name for the session ID
   - duration: The duration in seconds for the session lifetime
-- static_path: The path to static files
 - template_loader: The python module.Class to override the default template loader with
-- templates_path: The path to template files
 - transforms: A list of transformation objects to add to the application in module.Class format
-- translations_path: The path to translation files
-- ui_modules: Module for the UI modules classes (ie mysite.modules)
+- ui_modules: Module for the UI modules classes, can be a single module, a mapping of
+              modules (dict) or a list of modules.
 - xsrf_cookies: Enable xsrf_cookie mode for forms
 - whitelist: List of IP addresses in CIDR notation if whitelist decorator is to be used
 
@@ -262,7 +264,8 @@ The following is an example tinman application configuration:
     %YAML 1.2
     ---
     Application:
-      base_path: /home/foo/mywebsite
+      path:
+        base: /home/foo/mywebsite
       debug: True
       xsrf_cookies: False
       wake_interval: 60

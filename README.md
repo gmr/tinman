@@ -52,6 +52,7 @@ Install via pip or easy_install:
 ## Optional Dependencies
 - pika >= v0.9.5
 - psycopg2
+- redis
 - tornado-redis
 
 ## Application Runner

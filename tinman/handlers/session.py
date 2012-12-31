@@ -42,17 +42,21 @@ class SessionRequestHandler(web.RequestHandler):
 
         """
         super(SessionRequestHandler, self).on_finish()
-        self._session.last_request_uri = self.request.uri
-        self._session.save()
-        del self._session
+        self.session.last_request_uri = self.request.uri
+        self.session.save()
+        del self.session
 
     def prepare(self):
+        """Prepare the session, setting up the session object and loading in
+        the values, assigning the IP address to the session if it's an new one.
+
+        """
         super(SessionRequestHandler, self).prepare()
-        self._session = self._get_session_object()
-        self._session.load()
-        if not self._session.ip_address:
-            self._session.ip_address = self.request.remote_ip
-        LOGGER.debug('Session ID: %s', self._session.id)
+        self.session = self._get_session_object()
+        self.session.load()
+        if not self.session.ip_address:
+            self.session.ip_address = self.request.remote_ip
+        LOGGER.debug('Session ID: %s', self.session.id)
         self._set_session_cookie()
 
     def _clear_session(self):
@@ -61,7 +65,7 @@ class SessionRequestHandler(web.RequestHandler):
 
         """
         LOGGER.info('Clearing session')
-        self._session.delete()
+        self.session.delete()
         self.clear_cookie(self._session_cookie_name)
 
     def _get_session_id(self):
@@ -145,9 +149,9 @@ class SessionRequestHandler(web.RequestHandler):
 
     def _set_session_cookie(self):
         """Set the session data cookie."""
-        LOGGER.debug('Setting session cookie for %s', self._session.id)
+        LOGGER.debug('Setting session cookie for %s', self.session.id)
         self.set_secure_cookie(name=self._session_cookie_name,
-                               value=self._session.id,
+                               value=self.session.id,
                                expires=self._session_cookie_expiration)
 
 

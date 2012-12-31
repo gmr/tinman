@@ -3,7 +3,6 @@ auto-establish a single redis connection when initializing the connection.
 
 """
 import logging
-import tornadoredis
 from tornado import web
 
 LOGGER = logging.getLogger(__name__)
@@ -11,9 +10,11 @@ LOGGER = logging.getLogger(__name__)
 
 class RedisRequestHandler(web.RequestHandler):
     """This request handler will connect to Redis on initialize if the
-    connection is not previously set.
+    connection is not previously set. This handler uses the redis library for
+    synchronous redis use.
 
     """
+    CONFIG_DB = 'db'
     REDIS = 'redis'
     REDIS_HOST = 'localhost'
     REDIS_PORT = 6379
@@ -24,11 +25,12 @@ class RedisRequestHandler(web.RequestHandler):
         object for reuse later.
 
         """
+        if 'redis' not in globals():
+            import redis
         LOGGER.info('Creating new Redis instance')
         settings = self._redis_settings
         LOGGER.debug('Connecting to redis: %r', settings)
-        client = tornadoredis.Client(**settings)
-        client.connect()
+        client = redis.Redis(**settings)
         self.application.attributes.add(self.REDIS, client)
 
     @property
@@ -43,7 +45,7 @@ class RedisRequestHandler(web.RequestHandler):
         settings = self.application.settings.get('redis', dict())
         return {'host': settings.get('host', self.REDIS_HOST),
                 'port': settings.get('port', self.REDIS_PORT),
-                'selected_db': settings.get('db', self.REDIS_DB)}
+                self.CONFIG_DB: settings.get('db', self.REDIS_DB)}
 
     def prepare(self):
         """Prepare RedisRequestHandler requests, ensuring that there is a
@@ -64,3 +66,26 @@ class RedisRequestHandler(web.RequestHandler):
         if self.REDIS not in self.application.attributes:
             self._new_redis_client()
         return self.application.attributes.redis
+
+
+class AsynchronousRedisRequestHandler(RedisRequestHandler):
+    """This request handler will connect to Redis on initialize if the
+    connection is not previously set and uses the tornado-redis library for
+    asynchronous use.
+
+    """
+    CONFIG_DB = 'selected_db'
+
+    def _new_redis_client(self):
+        """Create a new redis client and assign it to the application.attributes
+        object for reuse later.
+
+        """
+        if 'tornadoredis' not in globals():
+            import tornadoredis
+        LOGGER.info('Creating new Redis instance')
+        settings = self._redis_settings
+        LOGGER.debug('Connecting to redis: %r', settings)
+        client = tornadoredis.Client(**settings)
+        client.connect()
+        self.application.attributes.add(self.REDIS, client)

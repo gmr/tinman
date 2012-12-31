@@ -1,6 +1,10 @@
 """
 The Redis Session Adapter
 
+This is synchronous because the Tornado prepare method does not support
+asynchronous use and prepare is used to transparently initialize the session
+for the user.
+
 """
 import logging
 from tinman import session

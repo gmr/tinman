@@ -70,32 +70,21 @@ Logging:
       formatter: syslog
 
   loggers:
-
     clihelper:
-      handlers: [console]
-      level: DEBUG
-      propagate: True
-      formatter: verbose
-
+      level: WARNING
+      propagate: true
+      handlers: [console, syslog]
     tinman:
-      handlers: [console, file]
-      propagate: True
-      formatter: verbose
-      level: DEBUG
-
-    tornado:
-      handlers: [console, file]
-      propagate: True
-      formatter: verbose
       level: INFO
+      propagate: true
+      handlers: [console, syslog]
+    tornado:
+      level: WARNING
+      propagate: true
+      handlers: [console, syslog]
 
-  root:
-    handlers: [error]
-    formatter: verbose
-    level: ERROR
-
-  disable_existing_loggers: True
-
+  disable_existing_loggers: true
+  incremental: false
 
 Routes:
   - [/, tinman.example.DefaultHandler]

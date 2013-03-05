@@ -58,7 +58,9 @@ class Controller(clihelper.Controller):
         """
         LOGGER.info('Creating process for TCP port %i', port)
         return process.Process(name="ServerProcess.%i" % port,
-                               args=(self._config, port, self._stats_queue,
+                               args=(self._config,
+                                     port,
+                                     self._stats_queue,
                                      self._debug))
 
     def _create_stats_queue(self):
@@ -70,15 +72,24 @@ class Controller(clihelper.Controller):
         """
         return multiprocessing.Queue()
 
+    def _insert_path(self, path):
+        """Insert a path into the Python system paths.
+
+        """
+        sys.path.insert(0, path)
+
     def _insert_base_path(self):
         """Inserts a base path into the sys.path list if one is specified in
         the configuration.
 
         """
+        if self._options.path:
+            self._config[clihelper._APPLICATION]['paths']['base'] = \
+                self._options.path
         paths = self._get_application_config().get('paths', dict())
         if 'base' in paths:
             LOGGER.debug('Appending %s to the sys.path list', paths['base'])
-            sys.path.insert(0, paths['base'])
+            self._insert_path(paths['base'])
 
     def _process(self):
         """Called when the controlling loop wakes. Use to gather stats
@@ -142,8 +153,20 @@ def add_required_config_keys():
     [clihelper.add_config_key(key) for key in _REQUIRED_CONFIG_KEYS]
 
 
+def setup_options(parser):
+    """Called by the clihelper._cli_options method if passed to the
+    Controller.run method.
+
+    """
+    parser.add_option("-p", "--path",
+                      action="store",
+                      dest="path",
+                      default=None,
+                      help="Path to prepend to the Python system path")
+
+
 def main():
     """Invoked by the script installed by setuptools."""
     clihelper.setup('tinman', __desc__, __version__)
     add_required_config_keys()
-    clihelper.run(Controller)
+    clihelper.run(Controller, setup_options)

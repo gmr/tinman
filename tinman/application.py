@@ -50,6 +50,10 @@ class Application(web.Application):
         self._prepare_uimodules()
         self._prepare_version()
 
+        # Prepend the system path if needed
+        if 'base' in self.paths:
+            sys.path.insert(0, self.paths['base'])
+
         # Get the routes and initialize the tornado.web.Application instance
         prepared_routes = self._prepare_routes(routes)
         LOGGER.debug('Routes: %r', routes)

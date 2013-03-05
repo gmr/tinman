@@ -30,7 +30,7 @@ Example usage (also see helloworld_basic.py in the examples):
 
 import base64
 
-def require_basic_auth(realm, validate_callback):
+def require_basic_auth(realm, validate_callback, do_wrap=True):
     def require_basic_auth_decorator(handler_class):
         def wrap_execute(handler_execute):
             def require_basic_auth(handler, kwargs):
@@ -57,6 +57,7 @@ def require_basic_auth(realm, validate_callback):
                 return handler_execute(self, transforms, *args, **kwargs)
             return _execute
 
-        handler_class._execute = wrap_execute(handler_class._execute)
+        if do_wrap:
+            handler_class._execute = wrap_execute(handler_class._execute)
         return handler_class
     return require_basic_auth_decorator

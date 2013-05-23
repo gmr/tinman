@@ -2,11 +2,10 @@ import os
 from platform import python_version_tuple
 from setuptools import setup
 
-requirements = ['clihelper',
+requirements = ['clihelper>=1.7.0',
                 'ipaddr',
-                'python_daemon',
                 'pyyaml',
-                'tornado']
+                'tornado>=3.0']
 test_requirements = ['mock', 'nose']
 if float('%s.%s' % python_version_tuple()[0:2]) < 2.7:
     requirements.append('argparse')
@@ -25,7 +24,7 @@ with open('MANIFEST.in', 'w') as handle:
             handle.write('include %s\n' % filename)
 
 setup(name='tinman',
-      version='0.9.5',
+      version='0.9.6',
       description=("Tornado application wrapper and toolset for Tornado "
                    "development"),
       long_description=('Tinman is a take what you need package designed to '

@@ -6,21 +6,14 @@ import logging
 import sys
 from tornado import web
 
+from tinman import config
 from tinman import utils
 from tinman import __version__
 
 LOGGER = logging.getLogger(__name__)
 
-__BASE__ = '{{base}}'
-BASE = 'base'
-DEFAULT_LOCALE = 'default_locale'
-PATHS = 'paths'
-STATIC = 'static'
-TEMPLATES = 'templates'
-TRANSFORMS = 'transforms'
-TRANSLATIONS = 'translations'
-UI_MODULES = 'ui_modules'
-VERSION = 'version'
+STATIC_PATH = 'static_path'
+TEMPLATE_PATH = 'template_path'
 
 
 class Application(web.Application):
@@ -51,8 +44,9 @@ class Application(web.Application):
         self._prepare_version()
 
         # Prepend the system path if needed
-        if 'base' in self.paths:
-            sys.path.insert(0, self.paths['base'])
+        #if config.BASE in self.paths:
+        #    LOGGER.debug('Base Path: %s', self.paths[config.BASE])
+        #    sys.path.insert(0, self.paths[config.BASE])
 
         # Get the routes and initialize the tornado.web.Application instance
         prepared_routes = self._prepare_routes(routes)
@@ -67,8 +61,8 @@ class Application(web.Application):
         or pass a function in the application settings dictionary as
         'log_function'.
         """
-        if "log_function" in self.settings:
-            self.settings["log_function"](handler)
+        if config.LOG_FUNCTION in self.settings:
+            self.settings[config.LOG_FUNCTION](handler)
             return
         if handler.get_status() < 400:
             log_method = LOGGER.info
@@ -87,7 +81,7 @@ class Application(web.Application):
         :rtype: dict
 
         """
-        return self._config.get(PATHS, dict())
+        return self._config.get(config.PATHS, dict())
 
     def _import_class(self, class_path):
         """Try and import the specified namespaced class.
@@ -96,7 +90,7 @@ class Application(web.Application):
         :rtype: class
 
         """
-        LOGGER.debug('Attempting to import %s', class_path)
+        LOGGER.debug('Importing %s', class_path)
         try:
             return utils.import_namespaced_class(class_path)
         except ImportError as error:
@@ -107,10 +101,10 @@ class Application(web.Application):
         """Dynamically import a module returning a handle to it.
 
         :param str module_path: The module path
-        :rtype:
+        :rtype: module
 
         """
-        LOGGER.debug('Attempting to import %s', module_path)
+        LOGGER.debug('Importing %s', module_path)
         try:
             return __import__(module_path)
         except ImportError as error:
@@ -122,8 +116,8 @@ class Application(web.Application):
         it into the python path.
 
         """
-        if BASE in self.paths:
-            sys.path.insert(0, self.paths[BASE])
+        if config.BASE in self.paths:
+            sys.path.insert(0, self.paths[config.BASE])
 
     def _prepare_paths(self):
         """Set the value of {{base}} in paths if the base path is set in the
@@ -132,12 +126,13 @@ class Application(web.Application):
         :raises: ValueError
 
         """
-        LOGGER.debug('Preparing paths')
-        if BASE in self.paths:
-            for path_name in self.paths:
-                if path_name != BASE:
-                    self._replace_path(path_name, __BASE__, self.paths[BASE])
-            LOGGER.debug('Prepared paths: %r', self.paths)
+        if config.BASE in self.paths:
+            for path in [path for path in self.paths if path != config.BASE]:
+                if config.BASE_VARIABLE in self.paths[path]:
+                    self.paths[path] = \
+                        self.paths[path].replace(config.BASE_VARIABLE,
+                                                 self.paths[config.BASE])
+        LOGGER.debug('Prepared paths: %r', self.paths)
 
     def _prepare_route(self, attrs):
         """Take a given inbound list for a route and parse it creating the
@@ -193,7 +188,6 @@ class Application(web.Application):
         """
         if not isinstance(routes, list):
             raise ValueError('Routes parameter must be a list of tuples')
-        LOGGER.debug('Preparing routes')
         prepared_routes = list()
         for parts in routes:
             route = self._prepare_route(parts)
@@ -203,20 +197,24 @@ class Application(web.Application):
         return prepared_routes
 
     def _prepare_static_path(self):
-        if STATIC in self.paths:
-            self._config['static_path'] = self.paths[STATIC]
+        LOGGER.info('%s in %r: %s', config.STATIC, self.paths, config.STATIC in self.paths)
+        if config.STATIC in self.paths:
+            LOGGER.info('Setting static path to %s', self.paths[config.STATIC])
+            self._config[STATIC_PATH] = self.paths[config.STATIC]
 
     def _prepare_template_path(self):
-        if TEMPLATES in self.paths:
-            self._config['template_path'] = self.paths[TEMPLATES]
+        LOGGER.info('%s in %r: %s', config.TEMPLATES, self.paths, config.TEMPLATES in self.paths)
+        if config.TEMPLATES in self.paths:
+            LOGGER.info('Setting template path to %s', self.paths[config.TEMPLATES])
+            self._config[TEMPLATE_PATH] = self.paths[config.TEMPLATES]
 
     def _prepare_transforms(self):
         """Prepare the list of transforming objects"""
-        if TRANSFORMS in self._config:
+        if config.TRANSFORMS in self._config:
             LOGGER.info('Preparing %i transform class(es) for import',
-                        len(self._config[TRANSFORMS]))
+                        len(self._config[config.TRANSFORMS]))
             for transform in [self._import_module(transform) for transform in
-                              self._config[TRANSFORMS]]:
+                              self._config[config.TRANSFORMS]]:
                 LOGGER.debug('Adding transform: %r', transform)
                 self.add_transform(transform)
 
@@ -225,26 +223,27 @@ class Application(web.Application):
         well.
 
         """
-        if TRANSLATIONS in self.paths:
+        if config.TRANSLATIONS in self.paths:
             LOGGER.info('Loading translations from %s',
-                        self.paths[TRANSLATIONS])
+                        self.paths[config.TRANSLATIONS])
             from tornado import locale
-            locale.load_translations(self.paths[TRANSLATIONS])
-            if DEFAULT_LOCALE in self._config:
+            locale.load_translations(self.paths[config.TRANSLATIONS])
+            if config.DEFAULT_LOCALE in self._config:
                 LOGGER.info('Setting default locale to %s',
-                            self._config[DEFAULT_LOCALE])
-                locale.set_default_locale(self._config[DEFAULT_LOCALE])
+                            self._config[config.DEFAULT_LOCALE])
+                locale.set_default_locale(self._config[config.DEFAULT_LOCALE])
 
     def _prepare_uimodule(self):
-        self._config[UI_MODULES] = self._import_module(self._config[UI_MODULES])
+        self._config[config.UI_MODULES] = \
+            self._import_module(self._config[config.UI_MODULES])
 
     def _prepare_uimodule_dict(self):
-        for key, value in self._config[UI_MODULES].items():
-            self._config[UI_MODULES][key] = self._import_module(value)
+        for key, value in self._config[config.UI_MODULES].items():
+            self._config[config.UI_MODULES][key] = self._import_module(value)
 
     def _prepare_uimodule_list(self):
-        for offset, value in enumerate(self._config[UI_MODULES]):
-            self._config[UI_MODULES][offset] = self._import_module(value)
+        for offset, value in enumerate(self._config[config.UI_MODULES]):
+            self._config[config.UI_MODULES][offset] = self._import_module(value)
 
     def _prepare_uimodules(self):
         """Prepare the UI Modules object, handling the three cases that Tornado
@@ -252,32 +251,22 @@ class Application(web.Application):
         of modules in a dictionary or a list of modules.
 
         """
-        if UI_MODULES in self._config:
-            if isinstance(self._config[UI_MODULES], str):
+        if config.UI_MODULES in self._config:
+            if isinstance(self._config[config.UI_MODULES], str):
                 self._prepare_uimodule()
-            elif isinstance(self._config[UI_MODULES], dict()):
+            elif isinstance(self._config[config.UI_MODULES], dict()):
                 self._prepare_uimodule_dict()
-            elif isinstance(self._config[UI_MODULES], list):
+            elif isinstance(self._config[config.UI_MODULES], list):
                 self._prepare_uimodule_list()
             else:
                 LOGGER.critical('Unknown format for %s configuration: %s',
-                                UI_MODULES, type(self._config[UI_MODULES]))
+                                config.UI_MODULES,
+                                type(self._config[config.UI_MODULES]))
 
     def _prepare_version(self):
         """Setup the application version"""
-        if VERSION not in self._config:
-            self._config[VERSION] = __version__
-
-    def _replace_path(self, path_name, name, value):
-        """Replace the name with the value for the given path_name name.
-
-        :param str path_name: The path_name name
-        :param str name: The string to replace in original string
-        :param str value: The string value replacement value for name
-
-        """
-        if path_name in self.paths:
-            self.paths[path_name] = self.paths[path_name].replace(name, value)
+        if config.VERSION not in self._config:
+            self._config[config.VERSION] = __version__
 
 
 class Attributes(object):

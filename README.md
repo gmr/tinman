@@ -21,6 +21,7 @@ previous.
 - Support for a External Template Loaders including Tinman's CouchDB Template Loader
 - Flexible logging configuration allowing for custom formatters, filters handlers and
   setting logging levels for individual packages.
+- Built in support for NewRelic's Python agent library
 
 ## Installation
 Install via pip or easy_install:
@@ -50,28 +51,44 @@ Install via pip or easy_install:
 - pyyaml
 
 ## Optional Dependencies
-- pika >= v0.9.5
-- psycopg2
-- redis
-- tornado-redis
+- Heapy: guppy,
+- LDAP: python-ldap,
+- MsgPack Sessions: msgpack,
+- NewRelic: newrelic>=1.12.0',
+- PostgreSQL: psycopg2,
+- RabbitMQ: pika>=0.9.9,
+- Redis: tornado-redis,
+- Redis Sessions: redis
+
+### Installing optional Dependencies
+Use pip to install dependencies:
+
+    pip install 'tinman[Dependency Name]'
+
+For example:
+
+    pip install 'tinman[RabbitMQ]'
 
 ## Application Runner
 The tinman application runner works off a YAML configuration file format and
 provides a convenient interface for running tornado applications interactively
 or as a daemon.
 
-    Command Line Syntax:
+Command Line Syntax:
 
-        Usage: tinman -c <configfile> [options]
+    Usage: usage: tinman -c <configfile> [options]
 
-        Tornado application wrapper
+    Tinman adds a little more stack to Tornado
 
-        Options:
-          --version             show program's version number and exit
-          -h, --help            show this help message and exit
-          -c CONFIG, --config=CONFIG
-                                Specify the configuration file for use
-          -f, --foreground      Run interactively in console
+    Options:
+      -h, --help            show this help message and exit
+      -c CONFIGURATION, --config=CONFIGURATION
+                            Path to the configuration file
+      -f, --foreground      Run interactively in console
+      -n NEWRELIC, --newrelic=NEWRELIC
+                            Path to newrelic.ini to enable NewRelic
+                            instrumentation
+      -p PATH, --path=PATH  Path to prepend to the Python system path
 
 ### Example Handlers
 
@@ -228,6 +245,21 @@ Logging uses the dictConfig format as specified at
 
   http://docs.python.org/library/logging.config.html#dictionary-schema-details
 
+But is able to do a minimal logging config thanks to clihelper defaults. The following is the minimal logging configuration required:
+
+    Logging:
+        tinman:
+          handlers: [console]
+          propagate: True
+          formatter: verbose
+          level: DEBUG
+        tornado:
+          handlers: [console]
+          propagate: True
+          formatter: verbose
+          level: INFO
+
+
 #### Route List
 The route list is specified using the top-level Routes keyword. Routes consist
 of a list of individual route items that may consist of mulitiple items in a route
@@ -260,7 +292,7 @@ The TemplateLoader configuration option is detailed the External Template Loadin
 section of the document.
 
 #### Example Configuration
-The following is an example tinman application configuration:
+The following is a "full" example tinman application configuration:
 
     %YAML 1.2
     ---

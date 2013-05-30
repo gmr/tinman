@@ -259,7 +259,6 @@ But is able to do a minimal logging config thanks to clihelper defaults. The fol
           formatter: verbose
           level: INFO
 
-
 #### Route List
 The route list is specified using the top-level Routes keyword. Routes consist
 of a list of individual route items that may consist of mulitiple items in a route

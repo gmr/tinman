@@ -21,7 +21,6 @@ class Application(web.Application):
     for you that you'd have to handle yourself.
 
     """
-
     def __init__(self, routes=None, port=None, **settings):
         """Create a new Application instance with the specified Routes and
         settings.
@@ -32,6 +31,7 @@ class Application(web.Application):
 
         """
         self.attributes = Attributes()
+        self.host = utils.gethostname()
         self.port = port
         self._config = settings or dict()
         self._insert_base_path()
@@ -49,7 +49,7 @@ class Application(web.Application):
         #    sys.path.insert(0, self.paths[config.BASE])
 
         # Get the routes and initialize the tornado.web.Application instance
-        prepared_routes = self._prepare_routes(routes)
+        prepared_routes = self.prepare_routes(routes)
         LOGGER.debug('Routes: %r', routes)
         super(Application, self).__init__(prepared_routes, **self._config)
 
@@ -82,6 +82,26 @@ class Application(web.Application):
 
         """
         return self._config.get(config.PATHS, dict())
+
+    def prepare_routes(self, routes):
+        """Prepare the routes by iterating through the list of tuples & calling
+        prepare route on them.
+
+        :param routes: Routes to prepare
+        :type routes: list
+        :rtype: list
+        :raises: ValueError
+
+        """
+        if not isinstance(routes, list):
+            raise ValueError('Routes parameter must be a list of tuples')
+        prepared_routes = list()
+        for parts in routes:
+            route = self._prepare_route(parts)
+            if route:
+                LOGGER.info('Appending handler: %r', route)
+                prepared_routes.append(route)
+        return prepared_routes
 
     def _import_class(self, class_path):
         """Try and import the specified namespaced class.
@@ -176,36 +196,19 @@ class Application(web.Application):
         # Return the prepared route as a tuple
         return tuple(prepared_route)
 
-    def _prepare_routes(self, routes):
-        """Prepare the routes by iterating through the list of tuples & calling
-        prepare route on them.
-
-        :param routes: Routes to prepare
-        :type routes: list
-        :rtype: list
-        :raises: ValueError
-
-        """
-        if not isinstance(routes, list):
-            raise ValueError('Routes parameter must be a list of tuples')
-        prepared_routes = list()
-        for parts in routes:
-            route = self._prepare_route(parts)
-            if route:
-                LOGGER.info('Appending handler: %r', route)
-                prepared_routes.append(route)
-        return prepared_routes
-
     def _prepare_static_path(self):
-        LOGGER.info('%s in %r: %s', config.STATIC, self.paths, config.STATIC in self.paths)
+        LOGGER.info('%s in %r: %s', config.STATIC, self.paths,
+                    config.STATIC in self.paths)
         if config.STATIC in self.paths:
             LOGGER.info('Setting static path to %s', self.paths[config.STATIC])
             self._config[STATIC_PATH] = self.paths[config.STATIC]
 
     def _prepare_template_path(self):
-        LOGGER.info('%s in %r: %s', config.TEMPLATES, self.paths, config.TEMPLATES in self.paths)
+        LOGGER.info('%s in %r: %s', config.TEMPLATES, self.paths,
+                    config.TEMPLATES in self.paths)
         if config.TEMPLATES in self.paths:
-            LOGGER.info('Setting template path to %s', self.paths[config.TEMPLATES])
+            LOGGER.info('Setting template path to %s',
+                        self.paths[config.TEMPLATES])
             self._config[TEMPLATE_PATH] = self.paths[config.TEMPLATES]
 
     def _prepare_transforms(self):

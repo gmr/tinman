@@ -24,7 +24,7 @@ with open('MANIFEST.in', 'w') as handle:
             handle.write('include %s\n' % filename)
 
 setup(name='tinman',
-      version='0.9.6',
+      version='0.9.7p0',
       description=("Tornado application wrapper and toolset for Tornado "
                    "development"),
       long_description=('Tinman is a take what you need package designed to '
@@ -52,6 +52,7 @@ setup(name='tinman',
       extras_require={'Heapy': 'guppy',
                       'LDAP': 'python-ldap',
                       'MsgPack Sessions': 'msgpack',
+                      'NewRelic': 'newrelic>=1.12.0',
                       'PostgreSQL': 'psycopg2',
                       'RabbitMQ': 'pika',
                       'Redis': 'tornado-redis',

@@ -3,7 +3,6 @@ process.py
 
 """
 from tinman import application
-import clihelper
 import copy
 from tornado import httpserver
 from tornado import ioloop
@@ -14,8 +13,9 @@ import socket
 import ssl
 from tornado import version as tornado_version
 
-LOGGER = logging.getLogger(__name__)
+from tinman import config
 
+LOGGER = logging.getLogger(__name__)
 
 class Process(multiprocessing.Process):
     """The process holding the HTTPServer and Application"""
@@ -27,7 +27,7 @@ class Process(multiprocessing.Process):
         super(Process, self).__init__(group, target, name, args, kwargs)
 
         # Passed in values
-        self.manager = kwargs['manager']
+        self.namespace = kwargs['namespace']
         self.port = kwargs['port']
 
         # Internal attributes holding instance information
@@ -36,18 +36,15 @@ class Process(multiprocessing.Process):
         self.request_counters = dict()
 
         # If newrelic is passed, use it
-        if self.manager.options.newrelic:
+        if self.namespace.args.newrelic:
             import newrelic.agent
-            newrelic.agent.initialize(self.manager.options.newrelic)
-
-        # Fixup the configuration parameters
-        self.config = self.fixup_configuration(self.manager.config)
+            newrelic.agent.initialize(self.namespace.args.newrelic)
 
     def create_application(self):
         """Create and return a new instance of tornado.web.Application
 
         """
-        return application.Application(self.routes, self.port, **self.settings)
+        return application.Application(self.settings)
 
     def create_http_server(self):
         """Setup the HTTPServer
@@ -56,27 +53,6 @@ class Process(multiprocessing.Process):
 
         """
         return self.start_httpserver(self.port, self.http_config)
-
-    def fixup_configuration(self, config):
-        """Rewrite the SSL certreqs option if it exists, do this once instead
-        # of in each process like we do for imports and other things
-
-        :param dict config: the configuration dictionary
-
-        """
-        new_config = copy.deepcopy(config)
-        if 'ssl_options' in new_config['HTTPServer']:
-            self.fixup_ssl_config(new_config['HTTPServer']['ssl_options'])
-
-        # Set the debug to True if running in the foreground
-        if self.manager.debug and not new_config['Application'].get('debug'):
-            new_config['Application']['debug'] = True
-
-        # Append the HTTP server ports for cross-process functionality
-        new_config['Application']['server_ports'] = \
-            new_config['HTTPServer']['ports']
-
-        return new_config
 
     def fixup_ssl_config(self, config):
         """Check the config to see if SSL configuration options have been passed
@@ -102,10 +78,10 @@ class Process(multiprocessing.Process):
         :rtype: dict
 
         """
-        config = self.config['HTTPServer']
-        return {'no_keep_alive': config.get('no_keep_alive', False),
-                'ssl_options': config.get('ssl_options'),
-                'xheaders': config.get('xheaders', False)}
+        server = self.namespace.config[config.HTTP_SERVER]
+        return {'no_keep_alive': server.get('no_keep_alive', False),
+                'ssl_options': server.get('ssl_options'),
+                'xheaders': server.get('xheaders', False)}
 
     def on_sigterm(self, signal_unused, frame_unused):
         """Stop the HTTP Server and IO Loop, shutting down the process
@@ -125,8 +101,6 @@ class Process(multiprocessing.Process):
         :param frame frame_unused: Unused frame the signal was caught in
 
         """
-        self.config = self.fixup_configuration(self.manager.config)
-        clihelper.setup_logging(self.manager.debug)
 
         # Update HTTP configuration
         for setting in self.http_config:
@@ -156,9 +130,6 @@ class Process(multiprocessing.Process):
         """
         LOGGER.debug('Initializing process')
 
-        # Now in a child process so setup logging for this process
-        clihelper.setup_logging(self.manager.debug)
-
         # Register the signal handlers
         self.setup_signal_handlers()
 
@@ -178,22 +149,16 @@ class Process(multiprocessing.Process):
             pass
 
     @property
-    def routes(self):
-        """Return the route list from the configuration.
-
-        :rtype: list
-
-        """
-        return self.config['Routes']
-
-    @property
     def settings(self):
         """Return the Application configuration
 
         :rtype: dict
 
         """
-        return self.config['Application']
+        new_config = copy.deepcopy(self.namespace.config)
+        for key in [config.HTTP_SERVER]:
+            del new_config[key]
+        return new_config
 
     def setup_signal_handlers(self):
         """Called when a child process is spawned to register the signal

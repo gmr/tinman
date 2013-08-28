@@ -318,7 +318,7 @@ class FileSessionAdapter(SessionAdapter):
     def _make_path(self, dir_path):
         """Create the full path specified.
 
-        :param str dir_path
+        :param str dir_path: The path to make
 
         """
         os.makedirs(dir_path, 0x755)
@@ -383,14 +383,14 @@ def get_session_adapter(application, session_id, configuration, duration):
     """Return a new instance of a session adapter for the given application,
     session, configuration and duration.
 
+    :param tornado.web.Application application: The Tornado application
+    :param str session_id: The session id
+    :param dict configuration: Session adapter configuration
+    :param int duration: Session duration
     :rtype: tinman.session.SessionAdapter
 
     """
-    LOGGER.debug('Returning a new session adapter: %r %r %r %r',
-                 application, session_id, configuration, duration)
-
     serializer = get_session_serializer(configuration)
-
     if configuration.get('name') == config.FILE:
         return FileSessionAdapter(application,
                                   session_id,
@@ -400,7 +400,10 @@ def get_session_adapter(application, session_id, configuration, duration):
 
     elif configuration.get('name') == config.REDIS:
         from tinman.session import redis_adapter
-        return redis_adapter.RedisSessionAdapter(application, session_id,
-                                                 configuration, duration)
+        return redis_adapter.RedisSessionAdapter(application,
+                                                 session_id,
+                                                 configuration,
+                                                 duration,
+                                                 serializer)
 
     raise exceptions.ConfigurationException('Session Adapter')

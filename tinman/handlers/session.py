@@ -102,27 +102,27 @@ class SessionRequestHandler(base.RequestHandler):
         """
         return session.get_session_adapter(self.application,
                                            self._cookie_session_id,
-                                           self._session_adapter_settings,
-                                           self._session_duration)
+                                           self._adapter_settings,
+                                           self._duration)
 
     @property
-    def _session_adapter_settings(self):
+    def _adapter_settings(self):
         """Return the session adapter settings
 
         :rtype: dict
 
         """
-        return self._session_settings.get(self.ADAPTER) or dict()
+        return self._settings.get(self.ADAPTER) or dict()
 
     @property
-    def _session_cookie_expiration(self):
+    def _cookie_expiration(self):
         """Return the expiration timestamp for the session cookie.
 
         :rtype: datetime
 
         """
         value = (datetime.datetime.utcnow() +
-                 datetime.timedelta(seconds=self._session_duration))
+                 datetime.timedelta(seconds=self._duration))
         LOGGER.debug('Cookie expires: %s', value.isoformat())
         return value
 
@@ -133,29 +133,29 @@ class SessionRequestHandler(base.RequestHandler):
         :rtype: str
 
         """
-        return self._session_cookie_settings.get(self.NAME, self.COOKIE_NAME)
+        return self._cookie_settings.get(self.NAME, self.COOKIE_NAME)
 
     @property
-    def _session_cookie_settings(self):
+    def _cookie_settings(self):
         """Return the cookie specific session settings
 
         :rtype: dict
 
         """
-        return self._session_settings.get(self.COOKIE)
+        return self._settings.get(self.COOKIE)
 
     @property
-    def _session_duration(self):
+    def _duration(self):
         """Return the session duration in seconds from the configuration,
         defaulting to the class default.
 
         :rtype: int
 
         """
-        return self._session_settings.get(self.DURATION, self.DEFAULT_DURATION)
+        return self._settings.get(self.DURATION, self.DEFAULT_DURATION)
 
     @property
-    def _session_settings(self):
+    def _settings(self):
         """Return the session management settings.
 
         :rtype: dict
@@ -168,4 +168,4 @@ class SessionRequestHandler(base.RequestHandler):
         LOGGER.debug('Setting session cookie for %s', self.session.id)
         self.set_secure_cookie(name=self._session_cookie_name,
                                value=self.session.id,
-                               expires=self._session_cookie_expiration)
+                               expires=self._cookie_expiration)

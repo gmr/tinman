@@ -19,12 +19,6 @@ from tinman import __version__
 from tinman import config
 from tinman import process
 
-# Default port
-DEFAULT_PORT = 8900
-
-# Process count defaults to the number of CPUs if not configured
-DEFAULT_PROCESS_COUNT = multiprocessing.cpu_count()
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -33,6 +27,9 @@ class Controller(helper.Controller):
     spawning and managing children.
 
     """
+    DEFAULT_PORT = [8900]
+    MAX_SHUTDOWN_WAIT = 4
+
     def enable_debug(self):
         """If the cli arg for foreground is set, set the configuration option
         for debug.
@@ -48,26 +45,41 @@ class Controller(helper.Controller):
         """
         if self.args.path:
             sys.path.insert(0, self.args.path)
-        if self.config.application.get(config.BASE, dict()).get(config.PATHS):
-            sys.path.insert(0,
-                            self.config.application[config.BASE][config.PATHS])
+
+        if hasattr(self.config.application, config.PATHS):
+            if hasattr(self.config.application.paths, config.BASE):
+                sys.path.insert(0, self.config.application.paths.base)
 
     @property
     def living_children(self):
-        return [child for child in self.children if child.is_alive()]
+        """Returns a list of all child processes that are still alive.
 
-    @property
-    def process_count_to_spawn(self):
-        """Return the number of processes to spawn, sending a single process
-        if in debug mode, otherwise the configured value defaulting to
-        DEFAULT_PROCESS_COUNT if not set.
-
-        :rtype: int
+        :rtype: list
 
         """
-        if self.debug:
-            return 1
-        return self.config.application.server.processes or DEFAULT_PROCESS_COUNT
+        return [child for child in self.children if child.is_alive()]
+
+    def configuration_reloaded(self):
+        """Send a SIGHUP to child processes"""
+        LOGGER.info('Notifying children of new configuration updates')
+        self.signal_children(signal.SIGHUP)
+
+    def process(self):
+        """Check up on child processes and make sure everything is running as
+        it should be.
+
+        """
+        LOGGER.debug('%i active children', len(self.living_children))
+
+    @property
+    def ports_to_spawn(self):
+        """Return the list of ports to spawn
+
+        :rtype: list
+
+        """
+        return (self.config.get(config.HTTP_SERVER, dict()).get(config.PORTS)
+                or DEFAULT_PORT)
 
     def set_base_path(self, value):
         """Munge in the base path into the configuration values
@@ -76,9 +88,7 @@ class Controller(helper.Controller):
 
         """
         if config.PATHS not in self.config.application:
-            print config.PATHS
             self.config.application[config.PATHS] = dict()
-            print self.config.application
 
         if config.BASE not in self.config.application[config.PATHS]:
             self.config.application[config.PATHS][config.BASE] = value
@@ -96,10 +106,36 @@ class Controller(helper.Controller):
         self.children = list()
         self.manager = multiprocessing.Manager()
         self.namespace = self.manager.Namespace()
+        self.namespace.args = self.args
         self.namespace.config = dict(self.config.application)
         self.namespace.debug = self.debug
-        self.namespace.args = self.args
+        self.namespace.routes = self.config.get(config.ROUTES)
+        self.namespace.server = self.config.get(config.HTTP_SERVER)
         self.spawn_processes()
+
+    def shutdown(self):
+        """Send SIGABRT to child processes to instruct them to stop"""
+        self.signal_children(signal.SIGABRT)
+
+        # Wait a few iterations when trying to stop children before terminating
+        waiting = 0
+        while self.living_children:
+            time.sleep(0.5)
+            waiting += 1
+            if waiting == self.MAX_SHUTDOWN_WAIT:
+                self.signal_children(signal.SIGKILL)
+                break
+
+    def signal_children(self, signum):
+        """Send a signal to all children
+
+        :param int signum: The signal to send
+
+        """
+        LOGGER.info('Sending signal %i to children', signum)
+        for child in self.living_children:
+            if child.pid != os.getpid():
+                os.kill(child.pid, signum)
 
     def spawn_process(self, port):
         """Create an Application and HTTPServer for the given port.
@@ -114,13 +150,7 @@ class Controller(helper.Controller):
 
     def spawn_processes(self):
         """Spawn of the appropriate number of application processes"""
-        port = self.config.application.get(config.HTTP_SERVER,
-                                           dict()).get(config.HTTP_PORT,
-                                                       DEFAULT_PORT)
-        processes = self.process_count_to_spawn
-        LOGGER.info('Spawning %i applicatication processes on port %i',
-                    processes, port)
-        for number in range(0, self.process_count_to_spawn):
+        for port in self.ports_to_spawn:
             process = self.spawn_process(port)
             process.start()
             self.children.append(process)
@@ -132,11 +162,6 @@ def main():
     parser.description(__desc__)
 
     p = parser.get()
-    p.add_argument('-n', '--newrelic',
-                   action='store',
-                   dest='newrelic',
-                   help='Path to newrelic.init for enabling NewRelic '
-                        'instrumentation')
     p.add_argument('-p', '--path',
                    action='store_true',
                    dest='path',

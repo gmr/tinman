@@ -3,6 +3,7 @@
 Application:
   cookie_secret: fc360bf9-979d-4de6-b97c-aff68e856191
   debug: true
+  #newrelic_ini: newrelic.ini
   session:
     adapter:
       class: RedisSessionHandler
@@ -17,72 +18,41 @@ Application:
     host: localhost
     port: 6379
     db: 0
-  stats_port: 9090
   xsrf_cookies: false
   wake_interval: 60
-  whitelist:
-    - 10.0.0.0/8
-    - 192.168.1.0/24
-    - 1.2.3.4/32
 
 Daemon:
     pidfile: /tmp/myapp.pid
 
 HTTPServer:
   no_keep_alive: false
-  ports: [8000, 8001, 8002]
+  ports: [8000, 8001]
   xheaders: true
 
 Logging:
   version: 1
-
   formatters:
     verbose:
       format: '%(levelname) -10s %(asctime)s %(process)-6d %(processName) -20s %(name) -20s %(funcName) -25s: %(message)s'
       datefmt: '%Y-%m-%d %H:%M:%S'
-    syslog:
-      format: ' %(levelname)s <PID %(process)d:%(processName)s> %(name)s.%(funcName)s(): %(message)s'
-
   handlers:
     console:
       class: logging.StreamHandler
       debug_only: True
       formatter: verbose
-
-    error:
-      filename: /Users/gmr/Source/Tinman/logs/error.log
-      class: logging.handlers.RotatingFileHandler
-      maxBytes: 104857600
-      backupCount: 6
-      formatter: verbose
-
-    file:
-      filename: /Users/gmr/Source/Tinman/logs/tinman.log
-      class: logging.handlers.RotatingFileHandler
-      maxBytes: 104857600
-      backupCount: 6
-      formatter: verbose
-
-    syslog:
-      class: logging.handlers.SysLogHandler
-      facility: local6
-      address: /var/run/syslog
-      formatter: syslog
-
   loggers:
-    clihelper:
+    helper:
       level: WARNING
       propagate: true
-      handlers: [console, syslog]
+      handlers: [console]
     tinman:
       level: INFO
       propagate: true
-      handlers: [console, syslog]
+      handlers: [console]
     tornado:
       level: WARNING
       propagate: true
-      handlers: [console, syslog]
-
+      handlers: [console]
   disable_existing_loggers: true
   incremental: false
 

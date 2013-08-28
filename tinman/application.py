@@ -21,13 +21,13 @@ class Application(web.Application):
     for you that you'd have to handle yourself.
 
     """
-    def __init__(self, routes=None, port=None, **settings):
+    def __init__(self, settings, routes, port):
         """Create a new Application instance with the specified Routes and
         settings.
 
+        :param dict settings: Application settings
         :param list routes: A list of route tuples
         :param int port: The port number for the HTTP server
-        :param dict settings: Application settings
 
         """
         self.attributes = Attributes()
@@ -43,15 +43,9 @@ class Application(web.Application):
         self._prepare_uimodules()
         self._prepare_version()
 
-        # Prepend the system path if needed
-        #if config.BASE in self.paths:
-        #    LOGGER.debug('Base Path: %s', self.paths[config.BASE])
-        #    sys.path.insert(0, self.paths[config.BASE])
-
         # Get the routes and initialize the tornado.web.Application instance
-        prepared_routes = self.prepare_routes(routes)
-        LOGGER.debug('Routes: %r', routes)
-        super(Application, self).__init__(prepared_routes, **self._config)
+        super(Application, self).__init__(self.prepare_routes(routes),
+                                          **self._config)
 
     def log_request(self, handler):
         """Writes a completed HTTP request to the logs.
@@ -60,6 +54,9 @@ class Application(web.Application):
         this behavior either subclass Application and override this method,
         or pass a function in the application settings dictionary as
         'log_function'.
+
+        :param tornado.web.RequestHandler handler: The request handler
+
         """
         if config.LOG_FUNCTION in self.settings:
             self.settings[config.LOG_FUNCTION](handler)
@@ -315,7 +312,6 @@ class Attributes(object):
         if item == self.ATTRIBUTES:
             return self.__dict__[item]
         return self.__dict__[self.ATTRIBUTES].get(item)
-
 
     def __iter__(self):
         """Iterate through the keys in the data dictionary.

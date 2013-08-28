@@ -2,13 +2,10 @@ import os
 from platform import python_version_tuple
 from setuptools import setup
 
-requirements = ['clihelper>=1.7.0',
-                'ipaddr',
-                'pyyaml',
-                'tornado>=3.0']
+requirements = ['helper', 'pyyaml', 'tornado>=3.0']
 test_requirements = ['mock', 'nose']
-if float('%s.%s' % python_version_tuple()[0:2]) < 2.7:
-    requirements.append('argparse')
+(major, minor, rev) = python_version_tuple()
+if float('%s.%s' % (major, minor)) < 2.7:
     test_requirements.append('unittest2')
 
 # Build the path to install the templates, example config and static files
@@ -24,7 +21,7 @@ with open('MANIFEST.in', 'w') as handle:
             handle.write('include %s\n' % filename)
 
 setup(name='tinman',
-      version='0.9.7',
+      version='0.10.0p0',
       description=("Tornado application wrapper and toolset for Tornado "
                    "development"),
       long_description=('Tinman is a take what you need package designed to '
@@ -51,12 +48,13 @@ setup(name='tinman',
       install_requires=requirements,
       extras_require={'Heapy': 'guppy',
                       'LDAP': 'python-ldap',
-                      'MsgPack Sessions': 'msgpack',
-                      'NewRelic': 'newrelic>=1.12.0',
+                      'MsgPack': 'msgpack',
+                      'NewRelic': 'newrelic',
                       'PostgreSQL': 'psycopg2',
-                      'RabbitMQ': 'pika>=0.9.9',
+                      'RabbitMQ': 'pika',
                       'Redis': 'tornado-redis',
-                      'Redis Sessions': 'redis'},
+                      'Redis Sessions': 'tornado-redis',
+                      'Whitelist': 'ipaddr'},
       test_suite='nose.collector',
       tests_require=test_requirements,
       data_files=[(key, data_files[key]) for key in data_files.keys()],

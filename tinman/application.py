@@ -7,6 +7,7 @@ import sys
 from tornado import web
 
 from tinman import config
+from tinman import exceptions
 from tinman import utils
 from tinman import __version__
 
@@ -42,10 +43,13 @@ class Application(web.Application):
         self._prepare_translations()
         self._prepare_uimodules()
         self._prepare_version()
+        self.prepare_routes(routes)
+        if not routes:
+            LOGGER.critical('Did not add any routes, will exit')
+            raise exceptions.NoRoutesException()
 
         # Get the routes and initialize the tornado.web.Application instance
-        super(Application, self).__init__(self.prepare_routes(routes),
-                                          **self._config)
+        super(Application, self).__init__(routes, **self._config)
 
     def log_request(self, handler):
         """Writes a completed HTTP request to the logs.

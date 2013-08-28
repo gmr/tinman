@@ -6,11 +6,12 @@ Application:
   #newrelic_ini: newrelic.ini
   session:
     adapter:
-      class: RedisSessionHandler
-      redis:
-        host: localhost
-        port: 6379
-        db: 0
+      #name: file
+      #cleanup: True
+      #directory: /tmp/sessions
+      name: redis
+      cleanup: True
+      directory: /tmp/sessions
     cookie:
       name: session
     duration: 3600
@@ -46,7 +47,7 @@ Logging:
       propagate: true
       handlers: [console]
     tinman:
-      level: INFO
+      level: DEBUG
       propagate: true
       handlers: [console]
     tornado:
@@ -57,5 +58,5 @@ Logging:
   incremental: false
 
 Routes:
-  - [/, tinman.example.DefaultHandler]
-  - ['/test.gif', tinman.example.DefaultHandler]
+  - [/, tinman.example.Handler]
+  - ['/test.gif', tinman.example.Handler]

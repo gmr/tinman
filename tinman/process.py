@@ -2,6 +2,7 @@
 process.py
 
 """
+from helper import config as helper_config
 from tornado import httpserver
 from tornado import ioloop
 import logging
@@ -35,6 +36,9 @@ class Process(multiprocessing.Process):
         self.app = None
         self.http_server = None
         self.request_counters = dict()
+
+        # Re-setup logging in the new process
+        self.logging_config = None
 
         # If newrelic is passed, use it
         if self.namespace.config.get(config.NEWRELIC):
@@ -131,6 +135,9 @@ class Process(multiprocessing.Process):
         """
         LOGGER.debug('Initializing process')
 
+        # Setup logging
+        self.logging_config = self.setup_logging()
+
         # Register the signal handlers
         self.setup_signal_handlers()
 
@@ -160,6 +167,9 @@ class Process(multiprocessing.Process):
 
         """
         return dict(self.namespace.config)
+
+    def setup_logging(self):
+        return helper_config.LoggingConfig(self.namespace.logging)
 
     def setup_newrelic(self):
         """Setup the NewRelic python agent"""

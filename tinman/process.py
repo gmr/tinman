@@ -2,8 +2,6 @@
 process.py
 
 """
-from tinman import application
-import copy
 from tornado import httpserver
 from tornado import ioloop
 import logging
@@ -13,9 +11,12 @@ import socket
 import ssl
 from tornado import version as tornado_version
 
+from tinman import application
 from tinman import config
+from tinman import exceptions
 
 LOGGER = logging.getLogger(__name__)
+
 
 class Process(multiprocessing.Process):
     """The process holding the HTTPServer and Application"""
@@ -36,15 +37,14 @@ class Process(multiprocessing.Process):
         self.request_counters = dict()
 
         # If newrelic is passed, use it
-        if self.namespace.args.newrelic:
-            import newrelic.agent
-            newrelic.agent.initialize(self.namespace.args.newrelic)
+        if self.namespace.config.get(config.NEWRELIC):
+            self.setup_newrelic()
 
     def create_application(self):
-        """Create and return a new instance of tornado.web.Application
-
-        """
-        return application.Application(self.settings)
+        """Create and return a new instance of tinman.application.Application"""
+        return application.Application(self.settings,
+                                       self.namespace.routes,
+                                       self.port)
 
     def create_http_server(self):
         """Setup the HTTPServer
@@ -52,9 +52,9 @@ class Process(multiprocessing.Process):
         :rtype: tornado.httpserver.HTTPServer
 
         """
-        return self.start_httpserver(self.port, self.http_config)
+        return self.start_http_server(self.port, self.http_config)
 
-    def fixup_ssl_config(self, config):
+    def fixup_ssl_config(self, ssl_config):
         """Check the config to see if SSL configuration options have been passed
         and replace none, option, and required with the correct values in
         the certreqs attribute if it is specified.
@@ -62,11 +62,11 @@ class Process(multiprocessing.Process):
         :param dict config: the HTTPServer > ssl_options configuration dict
 
         """
-        if 'cert_reqs' in config:
-            requirements = {'none': ssl.CERT_NONE,
-                            'optional': ssl.CERT_OPTIONAL,
-                            'required': ssl.CERT_REQUIRED}
-            config['cert_reqs'] = requirements[config['cert_reqs']]
+        if config.CERT_REQS in ssl_config:
+            requirements = {config.NONE: ssl.CERT_NONE,
+                            config.OPTIONAL: ssl.CERT_OPTIONAL,
+                            config.REQUIRED: ssl.CERT_REQUIRED}
+            config[config.CERT_REQS] = requirements[ssl_config[config.CERT_REQS]]
 
     @property
     def http_config(self):
@@ -78,12 +78,14 @@ class Process(multiprocessing.Process):
         :rtype: dict
 
         """
-        server = self.namespace.config[config.HTTP_SERVER]
-        return {'no_keep_alive': server.get('no_keep_alive', False),
-                'ssl_options': server.get('ssl_options'),
-                'xheaders': server.get('xheaders', False)}
+        server = self.namespace.server.get(config.HTTP_SERVER, {})
+        ssl_options = self.fixup_ssl_config(server.get(config.SSL_OPTIONS,
+                                                       dict()))
+        return {config.NO_KEEP_ALIVE: server.get(config.NO_KEEP_ALIVE, False),
+                config.SSL_OPTIONS: ssl_options,
+                config.XHEADERS: server.get(config.XHEADERS, False)}
 
-    def on_sigterm(self, signal_unused, frame_unused):
+    def on_sigabrt(self, signal_unused, frame_unused):
         """Stop the HTTP Server and IO Loop, shutting down the process
 
         :param int signal_unused: Unused signal number
@@ -101,7 +103,6 @@ class Process(multiprocessing.Process):
         :param frame frame_unused: Unused frame the signal was caught in
 
         """
-
         # Update HTTP configuration
         for setting in self.http_config:
             if getattr(self.http_server, setting) != self.http_config[setting]:
@@ -115,10 +116,10 @@ class Process(multiprocessing.Process):
                 self.app.settings[setting] = self.settings[setting]
 
         # Update the routes
-        routes = self.app.prepare_routes(self.routes)
         self.app.handlers = []
         self.app.named_handlers = {}
-        self.app.add_handlers(".*$", routes)
+        routes = self.namespace.config.get(config.ROUTES)
+        self.app.add_handlers(".*$", self.app.prepare_routes(routes))
 
         LOGGER.info('Configuration reloaded')
 
@@ -134,7 +135,10 @@ class Process(multiprocessing.Process):
         self.setup_signal_handlers()
 
         # Create the application instance
-        self.app = self.create_application()
+        try:
+            self.app = self.create_application()
+        except exceptions.NoRoutesException:
+            return
 
         # Create the HTTPServer
         self.http_server = self.create_http_server()
@@ -155,10 +159,12 @@ class Process(multiprocessing.Process):
         :rtype: dict
 
         """
-        new_config = copy.deepcopy(self.namespace.config)
-        for key in [config.HTTP_SERVER]:
-            del new_config[key]
-        return new_config
+        return dict(self.namespace.config)
+
+    def setup_newrelic(self):
+        """Setup the NewRelic python agent"""
+        import newrelic.agent
+        newrelic.agent.initialize(self.namespace.config.newrelic_ini)
 
     def setup_signal_handlers(self):
         """Called when a child process is spawned to register the signal
@@ -166,10 +172,9 @@ class Process(multiprocessing.Process):
 
         """
         LOGGER.debug('Registering signal handlers')
-        signal.signal(signal.SIGTERM, self.on_sigterm)
-        signal.signal(signal.SIGHUP, self.on_sighup)
+        signal.signal(signal.SIGABRT, self.on_sigabrt)
 
-    def start_httpserver(self, port, args):
+    def start_http_server(self, port, args):
         """Start the HTTPServer
 
         :param int port: The port to run the HTTPServer on

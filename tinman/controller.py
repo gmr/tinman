@@ -27,7 +27,7 @@ class Controller(helper.Controller):
     spawning and managing children.
 
     """
-    DEFAULT_PORT = [8900]
+    DEFAULT_PORTS = [8900]
     MAX_SHUTDOWN_WAIT = 4
 
     def enable_debug(self):
@@ -79,7 +79,7 @@ class Controller(helper.Controller):
 
         """
         return (self.config.get(config.HTTP_SERVER, dict()).get(config.PORTS)
-                or DEFAULT_PORT)
+                or self.DEFAULT_PORTS)
 
     def set_base_path(self, value):
         """Munge in the base path into the configuration values
@@ -108,6 +108,7 @@ class Controller(helper.Controller):
         self.namespace = self.manager.Namespace()
         self.namespace.args = self.args
         self.namespace.config = dict(self.config.application)
+        self.namespace.logging = self.config.logging
         self.namespace.debug = self.debug
         self.namespace.routes = self.config.get(config.ROUTES)
         self.namespace.server = self.config.get(config.HTTP_SERVER)

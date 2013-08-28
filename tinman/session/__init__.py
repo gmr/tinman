@@ -3,42 +3,19 @@ Session adapters
 
 """
 import logging
-import pickle
 import os
+from os import path
 import tempfile
 import time
 import uuid
 
+from tinman import config
 from tinman import exceptions
+from tinman import serializers
 
-DEFAULT_DURATION = 300
 LOGGER = logging.getLogger(__name__)
 
-
-class SessionSerializer(object):
-    """Base session data serialization object. To use a different session
-    serialization format, extend this class and implement the _serialize and
-    _deserialize methods.
-
-    """
-    def _deserialize(self, data):
-        """Return the deserialized session data.
-
-        :param str data: The data to deserialize
-        :rtype: dict
-        :raises: NotImplementedError
-
-        """
-        raise NotImplementedError
-
-    def _serialize(self):
-        """Return self._data as a serialized string.
-
-        :rtype: str
-        :raises: NotImplementedError
-
-        """
-        raise NotImplementedError
+DEFAULT_DURATION = 300
 
 
 class SessionAdapter(object):
@@ -47,21 +24,23 @@ class SessionAdapter(object):
 
     """
     def __init__(self, application, session_id=None, configuration=None,
-                 duration=DEFAULT_DURATION):
+                 duration=DEFAULT_DURATION, serializer=None):
         """Create a session adapter for the base URL specified, creating a new
         session if no session id is passed in.
 
         :param str session_id: The current session id if once has been started
         :param dict configuration: Session storage configuration
         :param int duration: The session duration for storage purposes
+        :type serializer: tinman.session.serializer.SessionSerializer
 
         """
         self.__dict__['attributes'] = dict()
+        self.__dict__['attributes']['_id'] = session_id or self._create_id()
         self.__dict__['data'] = dict()
         self._application = application
         self._config = configuration or dict()
         self._duration = duration
-        self.__dict__['attributes']['_id'] = session_id or self._create_id()
+        self._serializer = serializer or serializers.Pickle()
 
     def __contains__(self, item):
         """Check to see if the item is in the session data dictionary.
@@ -164,7 +143,7 @@ class SessionAdapter(object):
         :rtype: str
 
         """
-        return pickle.loads(data)
+        return self._serializer.deserialize(data)
 
     def _load_session_data(self):
         """Extend to the load the session from storage
@@ -180,7 +159,7 @@ class SessionAdapter(object):
         :rtype: str
 
         """
-        return pickle.dumps(self.__dict__['data'])
+        return self._serializer.serialize(self.__dict__['data'])
 
     def as_dict(self):
         """Return the SessionAdapter object as a dictionary value, returning
@@ -275,7 +254,7 @@ class FileSessionAdapter(SessionAdapter):
     SUBDIR = 'tinman'
 
     def __init__(self, application, session_id=None, configuration=None,
-                 duration=DEFAULT_DURATION):
+                 duration=DEFAULT_DURATION, serializer=None):
         """Create a session adapter for the base URL specified, creating a new
         session if no session id is passed in.
 
@@ -283,18 +262,21 @@ class FileSessionAdapter(SessionAdapter):
         :param str session_id: The current session id if once has been started
         :param dict configuration: Session storage configuration
         :param int duration: The session duration for storage retention
-
+        :param serializer: The object to use for session serialization
+        :type serializer: tinman.session.serializer.SessionSerializer
         """
         super(FileSessionAdapter, self).__init__(application, session_id,
-                                                 configuration, duration)
+                                                 configuration, duration,
+                                                 serializer)
+        LOGGER.info(self._serializer)
         self._storage_dir = self._setup_storage_dir()
-        if self.config.get('cleanup', True):
+        if self._config.get('cleanup', True):
             self._cleanup()
 
     def _cleanup(self):
         """Remove any stale files from the session storage directory"""
         for filename in os.listdir(self._storage_dir):
-            file_path = '%s/%s' % (self._storage_dir, filename)
+            file_path = path.join(self._storage_dir, filename)
             file_stat = os.stat(file_path)
             evaluate = max(file_stat.st_ctime, file_stat.st_mtime)
             if evaluate + self._duration < time.time():
@@ -308,7 +290,7 @@ class FileSessionAdapter(SessionAdapter):
         :rtype: str
 
         """
-        return  '%s/%s' % (tempfile.gettempdir(), self.SUBDIR)
+        return path.join(tempfile.gettempdir(), self.SUBDIR)
 
     @property
     def _filename(self):
@@ -317,7 +299,7 @@ class FileSessionAdapter(SessionAdapter):
         :rtype: str
 
         """
-        return '%s/%s' % (self._storage_dir, self.id)
+        return path.join(self._storage_dir, self.id)
 
     def _load_session_data(self):
         """Extend to the load the session from storage
@@ -333,13 +315,13 @@ class FileSessionAdapter(SessionAdapter):
             LOGGER.debug('Session file error: %s', error)
         return dict()
 
-    def _make_path(self, path):
+    def _make_path(self, dir_path):
         """Create the full path specified.
 
-        :param str path
+        :param str dir_path
 
         """
-        os.makedirs(path, 0755)
+        os.makedirs(dir_path, 0x755)
 
     def _setup_storage_dir(self):
         """Setup the storage directory path value and ensure the path exists.
@@ -348,16 +330,17 @@ class FileSessionAdapter(SessionAdapter):
         :raises: tinman.exceptions.ConfigurationException
 
         """
-        path = self.config.get('directory')
-        if path:
-            if not os.path.exists(path) or not os.path.isdir(path):
+        dir_path = self._config.get('directory')
+        if dir_path is None:
+            dir_path = self._default_path
+            if not os.path.exists(dir_path):
+                self._make_path(dir_path)
+        else:
+            dir_path = path.abspath(dir_path)
+            if not os.path.exists(dir_path) or not os.path.isdir(dir_path):
                 raise exceptions.ConfigurationException('FileSessionAdapter '
                                                         'directory')
-        else:
-            path = self._default_path
-            if not os.path.exists(path):
-                self._make_path(path)
-        return path.rstrip('/')
+        return dir_path.rstrip('/')
 
     def delete(self):
         """Remove the session data from storage, clearing any session values"""
@@ -381,15 +364,41 @@ class FileSessionAdapter(SessionAdapter):
             raise error
 
 
+def get_session_serializer(configuration):
+    """Return a data serializer for use with the session adapter for the given
+    configuration.
+    :param dict configuration: Session configuration
+    :rtype: tinman.serializer.Serializer
+
+    """
+    serializer = configuration.get('serializer')
+    if serializer == 'json':
+        return serializers.JSON()
+    elif serializer == 'msgpack':
+        return serializers.MsgPack()
+    return serializers.Pickle()
+
+
 def get_session_adapter(application, session_id, configuration, duration):
+    """Return a new instance of a session adapter for the given application,
+    session, configuration and duration.
 
-    LOGGER.debug('Returning a new session adapter: %r %r', configuration, duration)
+    :rtype: tinman.session.SessionAdapter
 
-    if configuration.get('class') == 'FileSessionHandler':
-        return FileSessionAdapter(application, session_id,
-                                  configuration, duration)
+    """
+    LOGGER.debug('Returning a new session adapter: %r %r %r %r',
+                 application, session_id, configuration, duration)
 
-    elif configuration.get('class') == 'RedisSessionHandler':
+    serializer = get_session_serializer(configuration)
+
+    if configuration.get('name') == config.FILE:
+        return FileSessionAdapter(application,
+                                  session_id,
+                                  configuration,
+                                  duration,
+                                  serializer)
+
+    elif configuration.get('name') == config.REDIS:
         from tinman.session import redis_adapter
         return redis_adapter.RedisSessionAdapter(application, session_id,
                                                  configuration, duration)

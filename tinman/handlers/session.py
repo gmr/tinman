@@ -1,18 +1,17 @@
-"""
-The SessionRequestHandler implements a base level of session handling. See
+"""The SessionRequestHandler implements a base level of session handling. See
 the tinman.session package to see what types of session adapters exist.
 
 """
 import datetime
 import logging
-from tornado import web
 
 LOGGER = logging.getLogger(__name__)
 
 from tinman import session
+from tinman.handlers import base
 
 
-class SessionRequestHandler(web.RequestHandler):
+class SessionRequestHandler(base.RequestHandler):
     """A RequestHandler that implements user sessions.  Configuration in the
     application settings is as follows:
 
@@ -37,11 +36,12 @@ class SessionRequestHandler(web.RequestHandler):
     DEFAULT_DURATION = 3600
 
     def on_finish(self):
-        """Called by Tornado when the request is done. Save the request and
-        remove the redis connection.
+        """Called by Tornado when the request is done. Update the session data
+        and remove the session object.
 
         """
         super(SessionRequestHandler, self).on_finish()
+        self.session.last_request_at = datetime.datetime.now().strftime('%s')
         self.session.last_request_uri = self.request.uri
         self.session.save()
         del self.session
@@ -56,8 +56,23 @@ class SessionRequestHandler(web.RequestHandler):
         self.session.load()
         if not self.session.ip_address:
             self.session.ip_address = self.request.remote_ip
-        LOGGER.debug('Session ID: %s', self.session.id)
+        self._last_values()
         self._set_session_cookie()
+        LOGGER.debug('Session ID: %s', self.session.id)
+
+    def _last_values(self):
+        """Always carry last_request_uri and last_request_at even if the last_*
+        values are null.
+
+        """
+        if not self.session.last_request_uri:
+            self.session.last_request_uri = None
+        lra = self.session.last_request_at
+        if lra is None:
+            self.session.last_request_at = None
+        else:
+            lra = float(lra)
+            self.session.last_request_at = datetime.datetime.fromtimestamp(lra)
 
     def _clear_session(self):
         """Clear the user's sessions, resetting the cookies and removing the
@@ -68,7 +83,8 @@ class SessionRequestHandler(web.RequestHandler):
         self.session.delete()
         self.clear_cookie(self._session_cookie_name)
 
-    def _get_session_id(self):
+    @property
+    def _cookie_session_id(self):
         """Gets the session id from the session cookie.
 
         :rtype: str
@@ -85,7 +101,7 @@ class SessionRequestHandler(web.RequestHandler):
 
         """
         return session.get_session_adapter(self.application,
-                                           self._get_session_id(),
+                                           self._cookie_session_id,
                                            self._session_adapter_settings,
                                            self._session_duration)
 
@@ -153,5 +169,3 @@ class SessionRequestHandler(web.RequestHandler):
         self.set_secure_cookie(name=self._session_cookie_name,
                                value=self.session.id,
                                expires=self._session_cookie_expiration)
-
-

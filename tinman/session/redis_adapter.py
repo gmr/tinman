@@ -1,9 +1,5 @@
 """
-The Redis Session Adapter
-
-This is synchronous because the Tornado prepare method does not support
-asynchronous use and prepare is used to transparently initialize the session
-for the user.
+Redis Session Adapter
 
 """
 import logging
@@ -21,14 +17,14 @@ class RedisSessionAdapter(session.SessionAdapter):
     If the host, port and db are not set, the
 
     """
-    FORMAT = 'tinman:session:%s'
+    FORMAT = 'sess:%s'
     REDIS = 'session_redis'
     REDIS_HOST = 'localhost'
     REDIS_PORT = 6379
     REDIS_DB = 0
 
     def __init__(self, application, session_id=None, configuration=None,
-                 duration=session.DEFAULT_DURATION):
+                 duration=session.DEFAULT_DURATION, serializer=None):
         """Create a session adapter for the base URL specified, creating a new
         session if no session id is passed in.
 
@@ -36,17 +32,20 @@ class RedisSessionAdapter(session.SessionAdapter):
         :param str session_id: The current session id if once has been started
         :param dict configuration: Session storage configuration
         :param int duration: The session duration for storage retention
+        :type serializer: tinman.session.serializer.SessionSerializer
 
         """
         LOGGER.debug('Creating a new session adapter: %r', duration)
         super(RedisSessionAdapter, self).__init__(application, session_id,
-                                                  configuration, duration)
+                                                  configuration, duration,
+                                                  serializer)
         self._setup_redis_client()
         LOGGER.debug('Duration: %r', self._duration)
 
     def delete(self):
         """Remove the session data from storage, clearing any session values"""
-        self._redis_client.delete(self._session_key)
+        yield
+        self._redis.delete(self._session_key)
         self.clear()
 
     @property
@@ -56,11 +55,11 @@ class RedisSessionAdapter(session.SessionAdapter):
         :rtype: dict
 
         """
-        return self._config.get('redis')
+        return self._config.get('redis', dict())
 
     def save(self):
         """Store the session for later retrieval"""
-        pipe = self._redis_client.pipeline()
+        pipe = self._redis.pipeline()
         pipe.set(self._session_key, self._serialize())
         pipe.expire(self._session_key, self._duration)
         pipe.execute()
@@ -72,20 +71,28 @@ class RedisSessionAdapter(session.SessionAdapter):
         :rtype: dict
 
         """
-        data = self._redis_client.get(self._session_key)
+        data = self._redis.get(self._session_key)
         return self._deserialize(data) if data else dict()
 
-    def _new_redis_connection(self):
+    def _redis_client(self):
         """Return a newly constructed redis connection.
 
         :rtype: redis.Redis
 
         """
-        settings = {'host': self.redis_settings.get('host', self.REDIS_HOST),
-                    'port': self.redis_settings.get('port', self.REDIS_PORT),
-                    'db': self.redis_settings.get('db', self.REDIS_DB)}
-        LOGGER.debug('Settings: %r', settings)
-        return redis.Redis(**settings)
+        LOGGER.debug(self._redis_config)
+        return redis.Redis(**self._redis_config)
+
+    @property
+    def _redis_config(self):
+        """Return the redis configuration as a dict.
+
+        :return: dict
+
+        """
+        return {'host': self.redis_settings.get('host', self.REDIS_HOST),
+                'port': self.redis_settings.get('port', self.REDIS_PORT),
+                'db': self.redis_settings.get('db', self.REDIS_DB)}
 
     @property
     def _session_key(self):
@@ -103,7 +110,7 @@ class RedisSessionAdapter(session.SessionAdapter):
 
         """
         if self.REDIS not in self._application.attributes:
-            self._redis_client = self._new_redis_connection()
-            self._application.attributes.add(self.REDIS, self._redis_client)
+            self._redis = self._redis_client()
+            self._application.attributes.add(self.REDIS, self._redis)
         else:
-            self._redis_client = self._application.attributes.session_redis
+            self._redis = self._application.attributes.session_redis

@@ -2,6 +2,7 @@
 @TODO see if we can move these functions to a more appropriate spot
 
 """
+import importlib
 import os
 import sys
 from socket import gethostname
@@ -29,19 +30,9 @@ def import_namespaced_class(path):
     """Pass in a string in the format of foo.Bar, foo.bar.Baz, foo.bar.baz.Qux
     and it will return a handle to the class
 
+    :param str path: The object path
     :rtype: class
 
     """
-    # Split up our string containing the import and class
     parts = path.split('.')
-
-    # Build our strings for the import name and the class name
-    import_name = '.'.join(parts[0:-1])
-    class_name = parts[-1]
-
-    # get the handle to the class for the given import
-    class_handle = getattr(__import__(import_name, fromlist=class_name),
-                           class_name)
-
-    # Return the class handle
-    return class_handle
+    return getattr(importlib.import_module('.'.join(parts[0:-1])), parts[-1])

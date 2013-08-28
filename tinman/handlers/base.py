@@ -24,7 +24,7 @@ class RequestHandler(web.RequestHandler):
 
         class Handler(handlers.RequestHandler):
 
-            allow = [GET, POST]
+            allow = [handlers.GET, handlers.POST]
 
             def get(self, *args, **kwargs):
                 self.write({'foo': 'bar'})
@@ -33,20 +33,11 @@ class RequestHandler(web.RequestHandler):
                 self.write({'message': 'Saved'})
 
     """
-    HEAD = 'HEAD'
-    GET = 'GET'
-    POST = 'POST'
-    DELETE = 'DELETE'
-    PATCH = 'PATCH'
-    PUT = 'PUT'
-    OPTIONS = 'OPTIONS'
-
     allow = []
 
     def _method_not_allowed(self):
         self.set_header('Allow', ', '.join(self.allow))
         self.set_status(405, 'Method Not Allowed')
-        self._log()
 
     def head(self, *args, **kwargs):
         """Implement the HTTP HEAD method

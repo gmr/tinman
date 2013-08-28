@@ -1,15 +1,20 @@
 import os
 from platform import python_version_tuple
 from setuptools import setup
+import sys
 
 requirements = ['helper', 'pyyaml', 'tornado>=3.0']
 test_requirements = ['mock', 'nose']
 (major, minor, rev) = python_version_tuple()
 if float('%s.%s' % (major, minor)) < 2.7:
+    requirements.append('importlib')
     test_requirements.append('unittest2')
 
 # Build the path to install the templates, example config and static files
-base_path = '/usr/local/share/tinman'
+if hasattr(sys, 'real_prefix'):
+    base_path = 'share/tinman'
+else:
+    base_path = '/usr/share/tinman'
 
 data_files = {'%s/' % base_path: ['README.md', 'etc/example.yaml'],
               '%s/init.d/' % base_path: ['etc/init.d/tinman'],

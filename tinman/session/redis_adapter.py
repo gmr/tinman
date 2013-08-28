@@ -48,15 +48,6 @@ class RedisSessionAdapter(session.SessionAdapter):
         self._redis.delete(self._session_key)
         self.clear()
 
-    @property
-    def redis_settings(self):
-        """Return the Redis configuration settings
-
-        :rtype: dict
-
-        """
-        return self._config.get('redis', dict())
-
     def save(self):
         """Store the session for later retrieval"""
         pipe = self._redis.pipeline()
@@ -90,9 +81,9 @@ class RedisSessionAdapter(session.SessionAdapter):
         :return: dict
 
         """
-        return {'host': self.redis_settings.get('host', self.REDIS_HOST),
-                'port': self.redis_settings.get('port', self.REDIS_PORT),
-                'db': self.redis_settings.get('db', self.REDIS_DB)}
+        return {'host': self._config.get('host', self.REDIS_HOST),
+                'port': self._config.get('port', self.REDIS_PORT),
+                'db': self._config.get('db', self.REDIS_DB)}
 
     @property
     def _session_key(self):

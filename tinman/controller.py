@@ -27,8 +27,10 @@ class Controller(helper.Controller):
     spawning and managing children.
 
     """
+    APPNAME = 'Tinman'
     DEFAULT_PORTS = [8900]
     MAX_SHUTDOWN_WAIT = 4
+    VERSION = __version__
 
     def enable_debug(self):
         """If the cli arg for foreground is set, set the configuration option
@@ -69,7 +71,9 @@ class Controller(helper.Controller):
         it should be.
 
         """
-        LOGGER.debug('%i active children', len(self.living_children))
+        children = len(self.living_children)
+        LOGGER.debug('%i active child%s',
+                     children, '' if children == 1 else 'ren')
 
     @property
     def ports_to_spawn(self):

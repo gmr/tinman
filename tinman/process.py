@@ -21,7 +21,9 @@ LOGGER = logging.getLogger(__name__)
 
 class Process(multiprocessing.Process):
     """The process holding the HTTPServer and Application"""
-
+    CERT_REQUIREMENTS = {config.NONE: ssl.CERT_NONE,
+                         config.OPTIONAL: ssl.CERT_OPTIONAL,
+                         config.REQUIRED: ssl.CERT_REQUIRED}
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
         """Create a new instance of Process
 
@@ -58,20 +60,6 @@ class Process(multiprocessing.Process):
         """
         return self.start_http_server(self.port, self.http_config)
 
-    def fixup_ssl_config(self, ssl_config):
-        """Check the config to see if SSL configuration options have been passed
-        and replace none, option, and required with the correct values in
-        the certreqs attribute if it is specified.
-
-        :param dict config: the HTTPServer > ssl_options configuration dict
-
-        """
-        if config.CERT_REQS in ssl_config:
-            requirements = {config.NONE: ssl.CERT_NONE,
-                            config.OPTIONAL: ssl.CERT_OPTIONAL,
-                            config.REQUIRED: ssl.CERT_REQUIRED}
-            config[config.CERT_REQS] = requirements[ssl_config[config.CERT_REQS]]
-
     @property
     def http_config(self):
         """Return a dictionary of HTTPServer arguments using the default values
@@ -82,12 +70,11 @@ class Process(multiprocessing.Process):
         :rtype: dict
 
         """
-        server = self.namespace.server.get(config.HTTP_SERVER, {})
-        ssl_options = self.fixup_ssl_config(server.get(config.SSL_OPTIONS,
-                                                       dict()))
-        return {config.NO_KEEP_ALIVE: server.get(config.NO_KEEP_ALIVE, False),
-                config.SSL_OPTIONS: ssl_options,
-                config.XHEADERS: server.get(config.XHEADERS, False)}
+        return {config.NO_KEEP_ALIVE:
+                    self.namespace.server.get(config.NO_KEEP_ALIVE, False),
+                config.SSL_OPTIONS: self.ssl_options,
+                config.XHEADERS: self.namespace.server.get(config.XHEADERS,
+                                                           False)}
 
     def on_sigabrt(self, signal_unused, frame_unused):
         """Stop the HTTP Server and IO Loop, shutting down the process
@@ -183,6 +170,21 @@ class Process(multiprocessing.Process):
         """
         LOGGER.debug('Registering signal handlers')
         signal.signal(signal.SIGABRT, self.on_sigabrt)
+
+    @property
+    def ssl_options(self):
+        """Check the config to see if SSL configuration options have been passed
+        and replace none, option, and required with the correct values in
+        the certreqs attribute if it is specified.
+
+        :rtype: dict
+
+        """
+        opts = self.namespace.server.get(config.SSL_OPTIONS) or dict()
+        if config.CERT_REQS in opts:
+            opts[config.CERT_REQS] = \
+                self.CERT_REQUIREMENTS[opts[config.CERT_REQS]]
+        return opts or None
 
     def start_http_server(self, port, args):
         """Start the HTTPServer

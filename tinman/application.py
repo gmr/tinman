@@ -70,7 +70,7 @@ class Application(web.Application):
         elif handler.get_status() < 500:
             log_method = LOGGER.warning
         else:
-            log_method = LOGGER.error
+            log_method = LOGGER.exception
         request_time = 1000.0 * handler.request.request_time()
         log_method("%d %s %.2fms", handler.get_status(),
                    handler._request_summary(), request_time)

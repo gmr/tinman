@@ -3,6 +3,8 @@ Tinman adds a little more stack to Tornado. It is designed to speed development
 of Tornado applications. It includes an application wrapper and a toolbox of
 decorators and utilities.
 
+[![PyPI version](https://badge.fury.io/py/tinman.png)](http://badge.fury.io/py/tinman) [![Downloads](https://pypip.in/d/tinman/badge.png)](https://crate.io/packages/tinman) [![Build Status](https://travis-ci.org/gmr/tinman.png?branch=master)](https://travis-ci.org/gmr/tinman)
+
 ## 0.9+ Version Warning
 The configuration file syntax has changed and the structure of the package has
 changed. Please test your applications if you are upgrading from 0.4 or

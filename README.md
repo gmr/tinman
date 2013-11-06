@@ -87,9 +87,6 @@ Command Line Syntax:
       -c CONFIGURATION, --config=CONFIGURATION
                             Path to the configuration file
       -f, --foreground      Run interactively in console
-      -n NEWRELIC, --newrelic=NEWRELIC
-                            Path to newrelic.ini to enable NewRelic
-                            instrumentation
       -p PATH, --path=PATH  Path to prepend to the Python system path
 
 ### Example Handlers
@@ -192,6 +189,7 @@ The following are the keys that are available to be used for your Tinman/Tornado
 - cookie_secret: A salt for signing cookies when using secure cookies
 - debug: Toggle tornado.Application's debug mode
 - login_url: Login URL when using Tornado's @authenticated decorator
+- newrelic_ini: Path to newrelic Python .ini file for enabling newrelic support
 - paths:
    - base: The root of the files for the application
    - static: The path to static files

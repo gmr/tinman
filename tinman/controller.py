@@ -168,7 +168,7 @@ def main():
 
     p = parser.get()
     p.add_argument('-p', '--path',
-                   action='store_true',
+                   action='store',
                    dest='path',
                    help='Path to prepend to the Python system path')
 

@@ -43,7 +43,7 @@ class Process(multiprocessing.Process):
         self.logging_config = None
 
         # If newrelic is passed, use it
-        if self.namespace.config.get(config.NEWRELIC):
+        if self.newrelic_ini_path:
             self.setup_newrelic()
 
     def create_application(self):
@@ -158,10 +158,14 @@ class Process(multiprocessing.Process):
     def setup_logging(self):
         return helper_config.LoggingConfig(self.namespace.logging)
 
+    @property
+    def newrelic_ini_path(self):
+        return self.namespace.config.get(config.NEWRELIC)
+
     def setup_newrelic(self):
         """Setup the NewRelic python agent"""
         import newrelic.agent
-        newrelic.agent.initialize(self.namespace.config.newrelic_ini)
+        newrelic.agent.initialize(self.newrelic_ini_path)
 
     def setup_signal_handlers(self):
         """Called when a child process is spawned to register the signal

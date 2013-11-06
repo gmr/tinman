@@ -1,5 +1,7 @@
+include etc/sysconfig/tinman
 include README.md
 include LICENSE
-include etc/*
-include examples/*
-include templates/*
+include etc/example.yaml
+include etc/init.d/tinman
+include etc/sysconfig/tinman
+include templates/redis_set_admin.html

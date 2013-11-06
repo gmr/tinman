@@ -28,7 +28,7 @@ Daemon:
 HTTPServer:
   no_keep_alive: false
   ports: [8000, 8001]
-  xheaders: true
+  xheaders: false
 
 Logging:
   version: 1

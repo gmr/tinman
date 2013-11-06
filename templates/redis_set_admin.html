@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block page_name %}{{title}}{% end %}
+{% block content %}
+  <p><strong>Usage Instructions:</strong> {{instructions}}.</p>
+  <ol class="list-unstyled">
+   <li>
+     <p class="lead">Add a new {{name}}</p>
+      <form method="post" class="form form-horizontal" role="form">
+        {% raw xsrf_form_html() %}
+        <div class="form-group row">
+          <div class="col-md-1 text-right"></div>
+          <div class="col-md-8">
+            <input class="form-control" name="value" type="text" placeholder="New Title">
+          </div>
+          <div class="col-md-2">
+            <input type="submit" class="btn btn-primary col-md-12" value="Add" disabled>
+          </div>
+        </div>
+      </form>
+    </li>
+    <li>
+      <hr>
+      <p class="lead">{{name}}s {{offset + 1}}-{{offset + limit}} of {{len(values)}}</p>
+    </li>
+    {% for value in sorted([value.title() for value in values])[offset:offset + limit] %}
+    <li>
+      <form method="post" class="form form-horizontal" role="form">
+        {% raw xsrf_form_html() %}
+        <input type="hidden" name="previous" value="value">
+        <div class="form-group row">
+          <div class="col-md-1 text-right">
+            <button type="button" class="btn btn-danger"><i class="glyphicon glyphicon-bin"></i></button>
+          </div>
+          <div class="col-md-8">
+            <input class="form-control" type="text" name="value" value="{{value}}">
+          </div>
+          <div class="col-md-2">
+            <input type="submit" class="btn btn-primary col-md-12" value="Update" disabled>
+          </div>
+        </div>
+      </form>
+    </li>
+    {% end %}
+  </ol>
+  {% import math %}
+  {% set pages = int(math.ceil(len(values) / float(limit))) %}
+  {% set current = (offset / limit) %}
+  <ul class="pagination">
+    <li{% if offset == 0 %} class="disabled"{% end %}><a href="{{request.path}}">&laquo;</a></li>
+    {% for p in range(0, pages) %}
+    <li{% if current == p %} class="active"{% end %}><a href="{{request.path}}?offset={{p * limit}}">{{p + 1}}</a></li>
+    {% end %}
+    <li{% if current == (pages - 1) %} class="disabled"{% end %}><a href="{{request.path}}?offset={{(pages - 1 )* limit}}">&raquo;</a></li>
+  </ul>
+  <script type="text/javascript">
+    $(function() {
+      $('input[name="value"]').keypress(function(){
+        console.log($(this).parent('div').siblings().find('input[type="submit"]'));
+        if ($(this).val() !== null) {
+          $(this).parent('div').siblings().find('input[type="submit"]').attr('disabled', false);
+        } else {
+          $(this).parent('div').siblings().find('input[type="submit"]').attr('disabled', true);
+        }
+      });
+    });
+  </script>
+{% end %}

@@ -14,9 +14,10 @@ previous.
 - A full featured application wrapper
 - Standard configuration for applications
 - Built-in configurable session management
+- Lightweight model system for NoSQL systems
+- Authentication Mixins for Github and StackExchange
 - A command-line tool, tinman-init that will create a skeleton app structure
   with the initial package and setup.py file.
-- RequestHandler output caching
 - Network address whitelisting decorator
 - Method/Function debug logging decorator
 - Handlers with automated connection setup for PostgreSQL, RabbitMQ and Redis
@@ -24,6 +25,7 @@ previous.
 - Flexible logging configuration allowing for custom formatters, filters handlers and
   setting logging levels for individual packages.
 - Built in support for NewRelic's Python agent library
+- RequestHandler output caching/memoization
 
 ## Installation
 Install via pip or easy_install:
@@ -34,6 +36,7 @@ Install via pip or easy_install:
 
 - tinman
   - application: Application extends tornado.web.Application, handling the auto-loading of configuration for routes, logging, translations, etc.
+  - auth: Authentication Mixins for GitHub, StackExchange, and HTTP Digest Authentication.
   - controller: Core tinman application controller.
   - decorators: Authentication, memoization and whitelisting decorators.
   - exceptions: Tinman specific exceptions
@@ -42,6 +45,7 @@ Install via pip or easy_install:
     - redis: A request handler that uses tornado-redis for use with redis.
     - session: A request handler with built-in session management.
   - loaders: A library of custom template loaders, currently only CouchDB is supported.
+  - model: Model system with base model class and various base model classes for supported storage backends.
   - process: Invoked by the controller, each Tinman process is tied to a specific HTTP server port.
   - session: Session adapters and serialization mixins
   - utilities: Command line utilities

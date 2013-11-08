@@ -3,7 +3,6 @@ Tinman session classes for the management of session data
 
 """
 from tornado import concurrent
-from tornado import gen
 import logging
 import os
 from os import path
@@ -238,24 +237,29 @@ class RedisSession(Session):
         kwargs = {'host': settings.get('host', cls.REDIS_HOST),
                   'port': settings.get('port', cls.REDIS_PORT),
                   'selected_db': settings.get('db', cls.REDIS_DB)}
-        LOGGER.info('Connecting to Redis: %(host)s:%(port)s DB %(selected_db)s',
+        LOGGER.info('Connecting to %(host)s:%(port)s DB %(selected_db)s',
                     kwargs)
         cls._redis_client = tornadoredis.Client(**kwargs)
         cls._redis_client.connect()
 
-    def delete(self):
+    @concurrent.return_future
+    def delete(self, callback):
         """Delete the item from storage
 
+        :param method callback: The callback method to invoke when done
+
         """
+        LOGGER.debug('Deleting session %s', self.id)
+        def on_result(value):
+            callback(True)
+        RedisSession._redis_client.delete(self._key, on_result)
         self.clear()
-        yield gen.Task(RedisSession._redis_client.get, self._key)
 
     @concurrent.return_future
     def fetch(self, callback):
         """Fetch the data for the model from Redis and assign the values.
 
-        :raises: tornado.gen.Return
-        :rtype: bool
+        :param method callback: The callback method to invoke when done
 
         """
         def on_result(value):
@@ -264,9 +268,6 @@ class RedisSession(Session):
             callback(bool(value))
         RedisSession._redis_client.get(self._key, on_result)
 
-    def foo(self):
-        LOGGER.info('In foo!: %r', self.dumps())
-
     @concurrent.return_future
     def save(self, callback):
         """Store the session data in redis
@@ -274,9 +275,8 @@ class RedisSession(Session):
         :param method callback: The callback method to invoke when done
 
         """
-        LOGGER.info('Saving session: %r', self.dumps())
+        LOGGER.debug('Saving session %s', self.id)
         def on_result(value):
-            LOGGER.info('On result: %r', value)
             callback(True)
         RedisSession._redis_client.set(self._key, self.dumps(), on_result)
 

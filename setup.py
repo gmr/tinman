@@ -3,7 +3,7 @@ from platform import python_version_tuple
 from setuptools import setup
 import sys
 
-requirements = ['helper', 'pyyaml', 'tornado>=3.0']
+requirements = ['helper', 'pyyaml', 'tornado>=3.1']
 test_requirements = ['mock', 'nose']
 (major, minor, rev) = python_version_tuple()
 if float('%s.%s' % (major, minor)) < 2.7:
@@ -16,7 +16,7 @@ if hasattr(sys, 'real_prefix'):
 else:
     base_path = '/usr/share/tinman'
 
-data_files = {'%s/' % base_path: ['README.md', 'etc/example.yaml'],
+data_files = {'%s/' % base_path: ['README.md', 'LICENSE', 'etc/example.yaml'],
               '%s/init.d/' % base_path: ['etc/init.d/tinman'],
               '%s/sysconfig/' % base_path: ['etc/sysconfig/tinman']}
 
@@ -26,7 +26,7 @@ with open('MANIFEST.in', 'w') as handle:
             handle.write('include %s\n' % filename)
 
 setup(name='tinman',
-      version='0.10.0p1',
+      version='0.10.0p3',
       description=("Tornado application wrapper and toolset for Tornado "
                    "development"),
       long_description=('Tinman is a take what you need package designed to '
@@ -42,13 +42,12 @@ setup(name='tinman',
       author='Gavin M. Roy',
       author_email='gavinmroy@gmail.com',
       url='http://github.com/gmr/tinman',
-      license='BSD',
+      license=open('LICENSE').read(),
       packages=['tinman',
                 'tinman.auth',
                 'tinman.decorators',
                 'tinman.handlers',
                 'tinman.loaders',
-                'tinman.session',
                 'tinman.utilities'],
       install_requires=requirements,
       extras_require={'Heapy': 'guppy',

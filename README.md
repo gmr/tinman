@@ -38,22 +38,20 @@ Install via pip or easy_install:
   - application: Application extends tornado.web.Application, handling the auto-loading of configuration for routes, logging, translations, etc.
   - auth: Authentication Mixins for GitHub, StackExchange, and HTTP Digest Authentication.
   - controller: Core tinman application controller.
+  - couchdb: A CouchDB based template loader module
   - decorators: Authentication, memoization and whitelisting decorators.
   - exceptions: Tinman specific exceptions
   - handlers: Request handlers which may be used as the base handler or mix-ins.
-    - rabbitmq: A request handler that implements a pika connection for publishing, consuming or other interaction with RabbitMQ.
-    - redis: A request handler that uses tornado-redis for use with redis.
-    - session: A request handler with built-in session management.
-  - loaders: A library of custom template loaders, currently only CouchDB is supported.
+    - base: Base request handlers including the SessionRequestHandler
+    - mixins: Request Handlers mixins including support for Redis, RabbitMQ and Model API Request Handlers
   - model: Model system with base model class and various base model classes for supported storage backends.
   - process: Invoked by the controller, each Tinman process is tied to a specific HTTP server port.
-  - session: Session adapters and serialization mixins
+  - session: Session object and storage mixins
   - utilities: Command line utilities
 
 ## Requirements
-- clihelper
+- helper
 - ipaddr
-- python_daemon
 - pyyaml
 
 ## Optional Dependencies
@@ -62,7 +60,7 @@ Install via pip or easy_install:
 - MsgPack Sessions: msgpack,
 - NewRelic: newrelic>=1.12.0',
 - PostgreSQL: psycopg2,
-- RabbitMQ: pika>=0.9.9,
+- RabbitMQ: pika>=0.9.13,
 - Redis: tornado-redis,
 - Redis Sessions: redis
 

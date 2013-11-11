@@ -117,10 +117,19 @@ class StorageModel(Model):
     :param dict kwargs: Additional kwargs passed in
 
     """
+    _new = True
+
     def __init__(self, item_id=None, **kwargs):
         super(StorageModel, self).__init__(item_id, **kwargs)
         if self.id:
+            # It's no longer a new model, since it's a load
+            self._new = False
+
+            # Fetch the model values from storage
             self.fetch()
+
+            # Toggle the changed back to false since it's an initial load
+            self._dirty = False
 
     def delete(self):
         """Delete the data for the model from storage and assign the values.
@@ -146,6 +155,15 @@ class StorageModel(Model):
         """
         raise NotImplementedError("Must extend this method")
 
+    @property
+    def is_new(self):
+        """Return a bool indicating if it's a new item or not
+
+        :rtype: bool
+
+        """
+        return self._new
+
 
 class AsyncRedisModel(StorageModel):
     """A model base class that uses Redis for the storage backend. Uses the
@@ -162,6 +180,7 @@ class AsyncRedisModel(StorageModel):
 
     """
     _redis_client = None
+    _saved = False
     _ttl = None
 
     def __init__(self, item_id=None, *args, **kwargs):
@@ -191,8 +210,11 @@ class AsyncRedisModel(StorageModel):
     def delete(self):
         """Delete the item from storage
 
+        :rtype: bool
+
         """
-        yield gen.Task(self._redis_client.delete, self._key)
+        result = gen.Task(self._redis_client.delete, self._key)
+        raise gen.Return(bool(result))
 
     @gen.coroutine
     def fetch(self):
@@ -211,7 +233,7 @@ class AsyncRedisModel(StorageModel):
     def save(self):
         """Store the model in Redis.
 
-        :raises: tornado.gen.Return
+        :rtype: bool
 
         """
         pipeline = self._redis_client.pipeline()
@@ -219,4 +241,5 @@ class AsyncRedisModel(StorageModel):
         if self._ttl:
             pipeline.expire(self._key, self._ttl)
         result = yield gen.Task(pipeline.execute)
+        self._dirty, self._saved = not all(result), all(result)
         raise gen.Return(all(result))

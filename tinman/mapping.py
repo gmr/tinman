@@ -14,50 +14,12 @@ class Mapping(collections.Mapping):
     and other Mapping methods.
 
     """
+    # Flag indicating the mapping has changed attributes
+    _dirty = False
+
     def __init__(self, **kwargs):
         """Assign all kwargs passed in as attributes of the object."""
         self.from_dict(kwargs)
-
-    def as_dict(self):
-        """Return this object as a dict value.
-
-        :rtype: dict
-
-        """
-        return dict(self.items())
-
-    def from_dict(self, values):
-        """Assign the values from the dict passed in. All items in the dict
-        are assigned as attributes of the object.
-
-        :param dict values: The dictionary of values to assign to this mapping
-
-        """
-        for k in values.keys():
-            setattr(self, k, values[k])
-
-    def clear(self):
-        """Clear all set attributes in the mapping.
-
-        """
-        for key in self.keys():
-            delattr(self, key)
-
-    def dumps(self):
-        """Return a JSON serialized version of the mapping.
-
-        :rtype: str|unicode
-
-        """
-        return json.dumps(self.as_dict(), encoding='utf-8', ensure_ascii=False)
-
-    def loads(self, value):
-        """Load in a serialized value, overwriting any previous values.
-
-        :param str|unicode value: The serialized value
-
-        """
-        self.from_dict(json.loads(value, encoding='utf-8'))
 
     def __contains__(self, item):
         """Check to see if the attribute name passed in exists.
@@ -135,6 +97,25 @@ class Mapping(collections.Mapping):
         """
         return not self.__eq__(other)
 
+    def __repr__(self):
+        """Mapping object representation
+
+        :rtype: str
+
+        """
+        return '<%s.%s keys="%s">' % (__name__, self.__class__.__name__,
+                                      ','.join(self.keys()))
+
+    def __setattr__(self, key, value):
+        """Set an attribute on the object flipping the indicator
+
+        :param str key: The attribute name
+        :param mixed value: The value to set
+
+        """
+        if key[0] != '_':
+            self._dirty = True
+        super(Mapping, self).__setattr__(key, value)
 
     def __setitem__(self, key, value):
         """Set an item in the mapping
@@ -144,6 +125,56 @@ class Mapping(collections.Mapping):
 
         """
         setattr(self, key, value)
+
+    def as_dict(self):
+        """Return this object as a dict value.
+
+        :rtype: dict
+
+        """
+        return dict(self.items())
+
+    def from_dict(self, values):
+        """Assign the values from the dict passed in. All items in the dict
+        are assigned as attributes of the object.
+
+        :param dict values: The dictionary of values to assign to this mapping
+
+        """
+        for k in values.keys():
+            setattr(self, k, values[k])
+
+    def clear(self):
+        """Clear all set attributes in the mapping.
+
+        """
+        for key in self.keys():
+            delattr(self, key)
+
+    @property
+    def dirty(self):
+        """Indicate if the mapping has changes from it's initial state
+
+        :rtype: bool
+
+        """
+        return self._dirty
+
+    def dumps(self):
+        """Return a JSON serialized version of the mapping.
+
+        :rtype: str|unicode
+
+        """
+        return json.dumps(self.as_dict(), encoding='utf-8', ensure_ascii=False)
+
+    def loads(self, value):
+        """Load in a serialized value, overwriting any previous values.
+
+        :param str|unicode value: The serialized value
+
+        """
+        self.from_dict(json.loads(value, encoding='utf-8'))
 
     def keys(self):
         """Return a list of attribute names for the mapping.

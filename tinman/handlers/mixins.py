@@ -101,6 +101,12 @@ class ModelAPIMixin(base.RequestHandler):
     @web.asynchronous
     @gen.engine
     def delete(self, *args, **kwargs):
+        """Handle delete of an item
+
+        :param args:
+        :param kwargs:
+
+        """
         # Create the model and fetch its data
         self.model = self.get_model(kwargs.get('id'))
         result = yield self.model.fetch()
@@ -110,8 +116,8 @@ class ModelAPIMixin(base.RequestHandler):
             self.not_found()
             return
 
-        # Stub to check for read permissions
-        if not self.has_write_permission():
+        # Stub to check for delete permissions
+        if not self.has_delete_permission():
             self.permission_denied()
             return
 
@@ -125,6 +131,12 @@ class ModelAPIMixin(base.RequestHandler):
     @web.asynchronous
     @gen.engine
     def head(self, *args, **kwargs):
+        """Handle HEAD requests for the item
+
+        :param args:
+        :param kwargs:
+
+        """
         # Create the model and fetch its data
         self.model = self.get_model(kwargs.get('id'))
         result = yield self.model.fetch()
@@ -147,17 +159,25 @@ class ModelAPIMixin(base.RequestHandler):
     @web.asynchronous
     @gen.engine
     def get(self, *args, **kwargs):
+        """Handle reading of the model
+
+        :param args:
+        :param kwargs:
+
+        """
         # Create the model and fetch its data
         self.model = self.get_model(kwargs.get('id'))
         result = yield self.model.fetch()
 
         # If model is not found, return 404
         if not result:
+            LOGGER.debug('Not found')
             self.not_found()
             return
 
         # Stub to check for read permissions
         if not self.has_read_permission():
+            LOGGER.debug('Permission denied')
             self.permission_denied()
             return
 
@@ -168,7 +188,21 @@ class ModelAPIMixin(base.RequestHandler):
     @web.asynchronous
     @gen.engine
     def post(self, *args, **kwargs):
+        """Handle creation of an item.
+
+        :param args:
+        :param kwargs:
+
+        """
         self.initialize_post()
+
+        # Don't allow the post if the poster does not have permission
+        if not self.has_create_permission():
+            LOGGER.debug('Does not have write_permission')
+            self.set_status(403, self.status_message('Creation Forbidden'))
+            self.finish()
+            return
+
         result = yield self.model.save()
         if result:
             self.set_status(201, self.status_message('Created'))
@@ -181,14 +215,24 @@ class ModelAPIMixin(base.RequestHandler):
     @web.asynchronous
     @gen.engine
     def put(self, *args, **kwargs):
+        """Handle updates of an item.
+
+        :param args:
+        :param kwargs:
+
+        """
         self.initialize_put(kwargs.get('id'))
-        changed = False
-        for key, value in self.model.iteritems():
+
+        if not self.has_update_permission():
+            self.set_status(403, self.status_message('Creation Forbidden'))
+            self.finish()
+            return
+
+        for key, value in self.model.items():
             if self.json_arguments.get(key) != value:
-                changed = True
                 self.model.set(key, self.json_arguments.get(key))
 
-        if not changed:
+        if not self.model.dirty:
             self.set_status(431, self.status_message('No changes made'))
             self.finish(self.model.as_dict())
             return
@@ -202,8 +246,9 @@ class ModelAPIMixin(base.RequestHandler):
         self.finish(self.model.as_dict())
 
     # Methods to Extend
-    def has_read_permission(self):
-        """Extend this method to implement custom authentication checking
+
+    def has_create_permission(self):
+        """Extend this method to implement custom permission checking
         for your data APIs.
 
         :rtype: bool
@@ -211,8 +256,26 @@ class ModelAPIMixin(base.RequestHandler):
         """
         return True
 
-    def has_write_permission(self):
-        """Extend this method to implement custom authentication checking
+    def has_delete_permission(self):
+        """Extend this method to implement custom permission checking
+        for your data APIs.
+
+        :rtype: bool
+
+        """
+        return True
+
+    def has_read_permission(self):
+        """Extend this method to implement custom permission checking
+        for your data APIs.
+
+        :rtype: bool
+
+        """
+        return True
+
+    def has_update_permission(self):
+        """Extend this method to implement custom permission checking
         for your data APIs.
 
         :rtype: bool
@@ -262,7 +325,7 @@ class ModelAPIMixin(base.RequestHandler):
         self.finish()
 
     def permission_denied(self, message=None):
-        self.set_status(404, self.status_message(message or
+        self.set_status(403, self.status_message(message or
                                                  'Permission Denied'))
         self.finish()
 

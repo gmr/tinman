@@ -113,7 +113,7 @@ class Mapping(collections.Mapping):
         :param mixed value: The value to set
 
         """
-        if key[0] != '_':
+        if key[0] != '_' and not self._dirty:
             self._dirty = True
         super(Mapping, self).__setattr__(key, value)
 

@@ -138,8 +138,9 @@ class RequestHandler(web.RequestHandler):
         assigned to the json_arguments attribute.
 
         """
+        LOGGER.debug('In RequestHandler.prepare()')
         super(RequestHandler, self).prepare()
-        self.json_arguments = None
+        self.json_arguments = dict()
         if self.request.headers.get('content-type', '').startswith(self.JSON):
             self.json_arguments = escape.json_decode(self.request.body)
 
@@ -186,11 +187,38 @@ class SessionRequestHandler(RequestHandler):
         and remove the session object.
 
         """
-        self.session.last_request_at = datetime.datetime.now().strftime('%s')
-        self.session.last_request_uri = self.request.uri
-        yield self.session.save()
-        del self.session
         super(SessionRequestHandler, self).on_finish()
+        LOGGER.debug('Entering SessionRequestHandler.on_finish: %s',
+                     self.session.id)
+        self.session.last_request_at = self.current_epoch()
+        self.session.last_request_uri = self.request.uri
+        if self.session.dirty:
+            result = yield self.session.save()
+            LOGGER.debug('on_finish yield save: %r', result)
+        self.session = None
+        LOGGER.debug('Exiting SessionRequestHandler.on_finish: %r',
+                     self.session)
+
+    def current_epoch(self):
+        return int(datetime.datetime.now().strftime('%s'))
+
+    @gen.coroutine
+    def start_session(self):
+        """Start the session. Invoke in your @gen.coroutine wrapped prepare
+        method like::
+
+            result = yield gen.Task(self.start_session)
+
+        :rtype: bool
+
+        """
+        self.session = self._session_start()
+        result = yield gen.Task(self.session.fetch)
+        self._set_session_cookie()
+        if not self.session.get('ip_address'):
+            self.session.ip_address = self.request.remote_ip
+        self._last_values()
+        raise gen.Return(result)
 
     @gen.coroutine
     def prepare(self):
@@ -199,15 +227,8 @@ class SessionRequestHandler(RequestHandler):
 
         """
         super(SessionRequestHandler, self).prepare()
-        self.session = self._session_start()
-
-        # Attempt to load the session data in
-        result = yield self.session.fetch()
-        if not self.session.get('ip_address'):
-            self.session.ip_address = self.request.remote_ip
-        self._last_values()
-        self._set_session_cookie()
-        LOGGER.debug('Session ID: %s', self.session.id)
+        result = yield gen.Task(self.start_session)
+        LOGGER.debug('Exiting SessionRequestHandler.prepare: %r', result)
 
     @property
     def _cookie_expiration(self):
@@ -232,9 +253,7 @@ class SessionRequestHandler(RequestHandler):
         """
         if not self.session.get('last_request_uri'):
             self.session.last_request_uri = None
-        lra = float(self.session.get('last_request_at') or 0)
-        self.session.last_request_at = (datetime.datetime.fromtimestamp(lra)
-                                        if lra else None)
+        self.session.last_request_at = self.session.get('last_request_at', 0)
 
     @property
     def _session_class(self):

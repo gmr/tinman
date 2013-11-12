@@ -2,7 +2,7 @@
 Tinman session classes for the management of session data
 
 """
-from tornado import concurrent
+from tornado import gen
 import logging
 import os
 from os import path
@@ -242,41 +242,41 @@ class RedisSession(Session):
         cls._redis_client = tornadoredis.Client(**kwargs)
         cls._redis_client.connect()
 
-    @concurrent.return_future
-    def delete(self, callback):
+    @gen.coroutine
+    def delete(self):
         """Delete the item from storage
 
         :param method callback: The callback method to invoke when done
 
         """
-        LOGGER.debug('Deleting session %s', self.id)
-        def on_result(value):
-            callback(True)
-        RedisSession._redis_client.delete(self._key, on_result)
+        result = yield gen.Task(RedisSession._redis_client.delete, self._key)
+        LOGGER.debug('Deleted session %s (%r)', self.id, result)
         self.clear()
+        raise gen.Return(result)
 
-    @concurrent.return_future
-    def fetch(self, callback):
+    @gen.coroutine
+    def fetch(self):
         """Fetch the data for the model from Redis and assign the values.
 
         :param method callback: The callback method to invoke when done
 
         """
-        def on_result(value):
-            if value:
-                self.loads(value)
-            callback(bool(value))
-        RedisSession._redis_client.get(self._key, on_result)
+        LOGGER.debug('Fetching session data: %s', self.id)
+        result = yield gen.Task(RedisSession._redis_client.get, self._key)
+        if result:
+            self.loads(result)
+            raise gen.Return(True)
+        else:
+            raise gen.Return(False)
 
-    @concurrent.return_future
-    def save(self, callback):
+    @gen.coroutine
+    def save(self):
         """Store the session data in redis
 
         :param method callback: The callback method to invoke when done
 
         """
-        LOGGER.debug('Saving session %s', self.id)
-        def on_result(value):
-            callback(True)
-        RedisSession._redis_client.set(self._key, self.dumps(), on_result)
-
+        result = yield gen.Task(RedisSession._redis_client.set,
+                                self._key, self.dumps())
+        LOGGER.debug('Saved session %s (%r)', self.id, result)
+        raise gen.Return(result)

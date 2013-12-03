@@ -89,6 +89,9 @@ class ModelAPIMixin(base.RequestHandler):
     ACCEPT = [base.GET, base.HEAD, base.DELETE, base.PUT, base.POST]
     MODEL = None
 
+    # Data attributes to replace in the model
+    REPLACE_ATTRIBUTES = {'password': bool}
+
     # Data attributes to strip from the model
     STRIP_ATTRIBUTES = []
 
@@ -316,6 +319,8 @@ class ModelAPIMixin(base.RequestHandler):
 
     def model_json(self):
         output = self.model.as_dict()
+        for key in self.REPLACE_ATTRIBUTES:
+            output[key] = self.REPLACE_ATTRIBUTES[key](output[key])
         for key in self.STRIP_ATTRIBUTES:
             del output[key]
         return web.utf8(escape.json_encode(output))

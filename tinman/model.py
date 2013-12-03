@@ -189,8 +189,6 @@ class AsyncRedisModel(StorageModel):
         self._serializer = msgpack
         if 'redis_client' not in kwargs:
             raise ValueError('redis_client must be passed in')
-        LOGGER.info('%r -- %r', args, kwargs)
-        LOGGER.info(repr(kwargs.get('redis_client')))
         self._redis_client = kwargs['redis_client']
 
         # The parent will attempt to fetch the value if item_id is set

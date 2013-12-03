@@ -177,10 +177,11 @@ class GithubMixin(OAuth2Mixin):
         http = self._get_auth_http_client()
         if post_args is not None:
             http.fetch(url, method="POST",
+                       user_agent='Tinman/Tornado',
                        body=auth.urllib_parse.urlencode(post_args),
                        callback=callback)
         else:
-            http.fetch(url, callback=callback)
+            http.fetch(url, user_agent='Tinman/Tornado', callback=callback)
 
     def _on_github_request(self, future, response):
         """Invoked as a response to the GitHub API request. Will decode the
@@ -188,7 +189,13 @@ class GithubMixin(OAuth2Mixin):
         raise an exception
 
         """
-        content = escape.json_decode(response.body)
+        try:
+            content = escape.json_decode(response.body)
+        except ValueError as error:
+            future.set_exception(Exception('Github error: %s' %
+                                           response.body))
+            return
+
         if 'error' in content:
             future.set_exception(Exception('Github error: %s' %
                                            str(content['error'])))

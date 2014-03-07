@@ -11,6 +11,7 @@ Example configuration:
         password: tornado
 
 """
+from tornado import gen
 import logging
 import pika
 from pika.adapters import tornado_connection
@@ -235,6 +236,7 @@ class RabbitMQRequestHandler(web.RequestHandler):
         self._set_rabbitmq_channel(channel)
         self._publish_deferred_messages()
 
+    @gen.coroutine
     def prepare(self):
         """Prepare the handler, ensuring RabbitMQ is connected or start a new
         connection attempt.

@@ -2,6 +2,7 @@
 Mixin handlers adding various different types of functionality
 
 """
+import socket
 from tornado import escape
 from tornado import gen
 import logging
@@ -11,6 +12,99 @@ from tinman.handlers import base
 from tinman import config
 
 LOGGER = logging.getLogger(__name__)
+
+
+class StatsdMixin(base.RequestHandler):
+    """Increments a counter and adds timing data to statsd for each request.
+
+    Example key format:
+
+        tornado.web.RequestHandler.GET.200
+
+    Additionally adds methods for talking to statsd via the request handler.
+
+    By default, it will talk to statsd on localhost. To configure the statsd
+    server address, add a statsd staza to the application configuration:
+
+    Application:
+      statsd:
+        host: 192.168.1.2
+        port: 8125
+    
+    """
+    STATSD_HOST = '127.0.0.1'
+    STATSD_PORT = 8125
+
+    def __init__(self, application, request, **kwargs):
+        super(StatsdMixin, self).__init__(application, request, **kwargs)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    @property
+    def _statsd_address(self):
+        """Return a tuple of host and port for the statsd server to send
+        stats to.
+
+        :return: tuple(host, port)
+
+        """
+        return (self.application.settings.get('statsd',
+                                              {}).get('host',
+                                                      self.STATSD_HOST),
+                self.application.settings.get('statsd',
+                                              {}).get('port',
+                                                      self.STATSD_PORT))
+
+    def _statsd_send(self, value):
+        """Send the specified value to the statsd daemon via UDP without a
+        direct socket connection.
+
+        :param str value: The properly formatted statsd counter value
+
+        """
+        self.socket.sendto(value, self._statsd_address)
+
+    def on_finish(self):
+        """Invoked once the request has been finished. Increment a counter
+        created in the format:
+
+            package[.module].Class.METHOD.STATUS
+            tornado.web.RequestHandler.GET.200
+
+        """
+        super(StatsdMixin, self).on_finish()
+        key = '%s.%s.%s.%s' % (self.__module__,
+                               self.__class__.__name__,
+                               self.request.method, self._status_code)
+        LOGGER.info('Processing %s', key)
+        self.statsd_incr(key)
+        self.statsd_add_timing(key, self.request.request_time() * 1000)
+
+    def statsd_incr(self, name, value=1):
+        """Increment a statsd counter by the specified value.
+
+        :param str name: The counter name to increment
+        :param int|float value: The value to increment by
+
+        """
+        self._statsd_send('%s:%s|c' % (name, value))
+
+    def statsd_set_gauge(self, name, value):
+        """Set a gauge in statsd for the specified name and value.
+
+        :param str name: The gauge name to increment
+        :param int|float value: The gauge value
+
+        """
+        self._statsd_send('%s:%s|g' % (name, value))
+
+    def statsd_add_timing(self, name, value):
+        """Add a time value in statsd for the specified name
+
+        :param str name: The timing name to add a sample to
+        :param int|float value: The time value
+
+        """
+        self._statsd_send('%s:%s|ms' % (name, value))
 
 
 class RedisMixin(base.RequestHandler):

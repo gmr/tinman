@@ -138,11 +138,9 @@ class RequestHandler(web.RequestHandler):
         assigned to the json_arguments attribute.
 
         """
-        LOGGER.debug('In RequestHandler.prepare()')
         super(RequestHandler, self).prepare()
-        self.json_arguments = dict()
         if self.request.headers.get('content-type', '').startswith(self.JSON):
-            self.json_arguments = escape.json_decode(self.request.body)
+            self.request.body = escape.json_decode(self.request.body)
 
     def write(self, chunk):
         """Writes the given chunk to the output buffer. Checks for curl in the

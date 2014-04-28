@@ -2,6 +2,7 @@
 Tinman Test Application
 
 """
+from datetime import date
 import logging
 from tornado import web
 
@@ -51,7 +52,8 @@ class Handler(SessionRequestHandler):
 
         session = self.session.as_dict()
         if session['last_request_at']:
-            session['last_request_at'] = session['last_request_at'].isoformat()
+            session['last_request_at'] = str(date.fromtimestamp(
+                                             session['last_request_at']))
 
         # Send a JSON string for our test
         self.write({'message': 'Hello World',

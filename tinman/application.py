@@ -4,6 +4,7 @@ Main Tinman Application Class
 """
 import logging
 import sys
+
 from tornado import web
 
 from tinman import config
@@ -37,13 +38,13 @@ class Application(web.Application):
         self._config = settings or dict()
         self._insert_base_path()
         self._prepare_paths()
+        self._prepare_routes(routes)
         self._prepare_static_path()
         self._prepare_template_path()
         self._prepare_transforms()
         self._prepare_translations()
         self._prepare_uimodules()
         self._prepare_version()
-        self.prepare_routes(routes)
         if not routes:
             LOGGER.critical('Did not add any routes, will exit')
             raise exceptions.NoRoutesException()
@@ -83,26 +84,6 @@ class Application(web.Application):
 
         """
         return self._config.get(config.PATHS, dict())
-
-    def prepare_routes(self, routes):
-        """Prepare the routes by iterating through the list of tuples & calling
-        prepare route on them.
-
-        :param routes: Routes to prepare
-        :type routes: list
-        :rtype: list
-        :raises: ValueError
-
-        """
-        if not isinstance(routes, list):
-            raise ValueError('Routes parameter must be a list of tuples')
-        prepared_routes = list()
-        for parts in routes:
-            route = self._prepare_route(parts)
-            if route:
-                LOGGER.info('Appending handler: %r', route)
-                prepared_routes.append(route)
-        return prepared_routes
 
     def _import_class(self, class_path):
         """Try and import the specified namespaced class.
@@ -197,6 +178,26 @@ class Application(web.Application):
         # Return the prepared route as a tuple
         return tuple(prepared_route)
 
+    def _prepare_routes(self, routes):
+        """Prepare the routes by iterating through the list of tuples & calling
+        prepare route on them.
+
+        :param routes: Routes to prepare
+        :type routes: list
+        :rtype: list
+        :raises: ValueError
+
+        """
+        if not isinstance(routes, list):
+            raise ValueError('Routes parameter must be a list of tuples')
+        prepared_routes = list()
+        for parts in routes:
+            route = self._prepare_route(parts)
+            if route:
+                LOGGER.info('Appending handler: %r', route)
+                prepared_routes.append(route)
+        return prepared_routes
+
     def _prepare_static_path(self):
         LOGGER.info('%s in %r: %s', config.STATIC, self.paths,
                     config.STATIC in self.paths)
@@ -214,13 +215,8 @@ class Application(web.Application):
 
     def _prepare_transforms(self):
         """Prepare the list of transforming objects"""
-        if config.TRANSFORMS in self._config:
-            LOGGER.info('Preparing %i transform class(es) for import',
-                        len(self._config[config.TRANSFORMS]))
-            for transform in [self._import_module(transform) for transform in
-                              self._config[config.TRANSFORMS]]:
-                LOGGER.debug('Adding transform: %r', transform)
-                self.add_transform(transform)
+        for offset, value in enumerate(self._config.get(config.TRANSFORMS, [])):
+            self._config[config.TRANSFORMS][offset] = self._import_class(value)
 
     def _prepare_translations(self):
         """Load in translations if they are set, and add the default locale as
@@ -237,35 +233,11 @@ class Application(web.Application):
                             self._config[config.DEFAULT_LOCALE])
                 locale.set_default_locale(self._config[config.DEFAULT_LOCALE])
 
-    def _prepare_uimodule(self):
-        self._config[config.UI_MODULES] = \
-            self._import_module(self._config[config.UI_MODULES])
-
-    def _prepare_uimodule_dict(self):
-        for key, value in self._config[config.UI_MODULES].items():
-            self._config[config.UI_MODULES][key] = self._import_module(value)
-
-    def _prepare_uimodule_list(self):
-        for offset, value in enumerate(self._config[config.UI_MODULES]):
-            self._config[config.UI_MODULES][offset] = self._import_module(value)
-
     def _prepare_uimodules(self):
-        """Prepare the UI Modules object, handling the three cases that Tornado
-        supports for the ui_modules configuration: a single module, a mapping
-        of modules in a dictionary or a list of modules.
-
-        """
-        if config.UI_MODULES in self._config:
-            if isinstance(self._config[config.UI_MODULES], str):
-                self._prepare_uimodule()
-            elif isinstance(self._config[config.UI_MODULES], dict()):
-                self._prepare_uimodule_dict()
-            elif isinstance(self._config[config.UI_MODULES], list):
-                self._prepare_uimodule_list()
-            else:
-                LOGGER.critical('Unknown format for %s configuration: %s',
-                                config.UI_MODULES,
-                                type(self._config[config.UI_MODULES]))
+        """Prepare the UI Modules from a list of namespaced paths."""
+        for key, value in self._config.get(config.UI_MODULES, {}).iteritems():
+            self._config[config.UI_MODULES][key] = self._import_class(value)
+        self._config[config.UI_MODULES] = dict(self._config[config.UI_MODULES] or {})
 
     def _prepare_version(self):
         """Setup the application version"""
